@@ -1,16 +1,16 @@
-import argparse
-import glob
 import json
 import logging
-from datetime import datetime as dt
+from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Dict, List, Tuple
 
 import numpy as np
-from sleeplab_converter import edf
-from sleeplab_converter.mars_database import annotation
 from sleeplab_format import writer, models
+
+from sleeplab_converter import edf
+from sleeplab_converter.events_mapping import STAGE_MAPPING, AASM_EVENT_MAPPING
+from sleeplab_converter.mars_database import annotation
 
 logger = logging.getLogger(__name__)
 
@@ -32,14 +32,14 @@ def parse_samplearrays(s_load_funcs, sig_headers, header):
         )
         return models.SampleArray(attributes=array_attributes, values_func=_load_func)
 
-    if type(header["startdate"]) is dt:
+    if type(header["startdate"]) is datetime:
         start_ts = header["startdate"]
     else:
-        start_ts = dt.strptime(
-            header["startdate"] + "-" + header["starttime"], "%d.%m.%y-%H.%M.%S"
-        )
+        datetime_str: str = f"{header["startdate"]}-{header["starttime"]}"
+        datetime_format: str = "%d.%m.%y-%H.%M.%S"
+        start_ts = datetime.strptime(datetime_str, datetime_format)
 
-    sample_arrays = {}
+    sample_arrays: Dict = {}
     for s_load_func, s_header in zip(s_load_funcs, sig_headers):
         sample_array = _parse_samplearray(s_load_func, s_header)
         sample_arrays[sample_array.attributes.name] = sample_array
@@ -48,38 +48,14 @@ def parse_samplearrays(s_load_funcs, sig_headers, header):
 
 
 def parse_sleep_stage(row) -> models.Annotation[models.AASMSleepStage]:
-
+    """
+    Parse a DataFrame row to create an Annotation object for recognized sleep stages.
+    Returns an Annotation if the 'Event_label' matches a known stage; otherwise, returns None.
+    """
     # ToDo: Check unique names from all data!! There can be errors
-
-    stage_map = {
-        # Deltamed
-        "Veille": models.AASMSleepStage.W,
-        "Stade 1": models.AASMSleepStage.N1,
-        "Stade 2": models.AASMSleepStage.N2,
-        "Stade 3": models.AASMSleepStage.N3,
-        "Stade 4": models.AASMSleepStage.N3,  # RK stage 4 combined to 3 in AASM rules
-        "S. Paradoxal": models.AASMSleepStage.R,
-        "Indéterminé": models.AASMSleepStage.UNSCORED,
-        # Remlogic
-        "SLEEP-S0": models.AASMSleepStage.W,
-        "SLEEP-S1": models.AASMSleepStage.N1,
-        "SLEEP-S2": models.AASMSleepStage.N2,
-        "SLEEP-S3": models.AASMSleepStage.N3,
-        "SLEEP-S4": models.AASMSleepStage.N3,  # RK stage 4 combined to 3 in AASM rules
-        "SLEEP-REM": models.AASMSleepStage.R,
-        # BrainRT
-        "Sleep stage W": models.AASMSleepStage.W,
-        "Sleep stage N1": models.AASMSleepStage.N1,
-        "Sleep stage N2": models.AASMSleepStage.N2,
-        "Sleep stage N3": models.AASMSleepStage.N3,
-        "Sleep stage N4": models.AASMSleepStage.N3,  # RK stage 4 combined to 3 in AASM rules
-        "Sleep stage R": models.AASMSleepStage.R,
-        "SLEEP-UNSCORED": models.AASMSleepStage.UNSCORED,
-    }
-
-    if row["Event_label"] in stage_map.keys():
+    if row["Event_label"] in STAGE_MAPPING.keys():
         return models.Annotation[models.AASMSleepStage](
-            name=stage_map[row["Event_label"]],
+            name=STAGE_MAPPING[row["Event_label"]],
             start_ts=row["Start_time"],
             start_sec=row["Time_from_start"],
             duration=row["Duration"],
@@ -89,73 +65,18 @@ def parse_sleep_stage(row) -> models.Annotation[models.AASMSleepStage]:
 
 
 def parse_for_aasm_annotation(row) -> models.Annotation[models.AASMEvent]:
-
+    """
+    Parse a DataFrame row to create an Annotation for AASM events.
+    Returns an Annotation if 'Event_label' matches and, if present, 'Validated' is "Yes".
+    Otherwise, returns None.
+    """
     # ToDo: Check unique names from all data!! There can be events missing
 
-    aasm_event_map = {
-        #'': models.AASMEvent.UNSURE,
-        # Score all artifacts as ARTIFACT
-        # Deltamed exports channel-specific aftefacts like 'Artefact (PRES)', check 'original_annotations.a' -file for these
-        "SIGNAL-ARTIFACT": models.AASMEvent.ARTIFACT,  # Remlogic
-        "SIGNAL-QUALITY-LOW": models.AASMEvent.ARTIFACT,  # Remlogic
-        "PLM droit": models.AASMEvent.PLM_RIGHT,  # Deltamed
-        "PLM Gauce": models.AASMEvent.PLM_LEFT,  # Deltamed
-        "PLM-LM": models.AASMEvent.PLM,  # Remlogic
-        "PLM": models.AASMEvent.PLM,  # Remlogic
-        "Limb movement : Mouvement de la jambe gauche": models.AASMEvent.PLM,  # csv
-        "Arousal non spécifique": models.AASMEvent.AROUSAL,  # Deltamed
-        "Arousal cortical": models.AASMEvent.AROUSAL,  # Deltamed
-        "AROUSAL": models.AASMEvent.AROUSAL,  # Remlogic
-        "Micro-éveil": models.AASMEvent.AROUSAL,  # csv #This is arousal also (manually scored)
-        "Arousal d'origine respiratoire": models.AASMEvent.AROUSAL_RES,  # Deltamed
-        "AROUSAL-RESP": models.AASMEvent.AROUSAL_RES,  # Remlogic
-        "AROUSAL-SNORE": models.AASMEvent.AROUSAL_RES,  # Remlogic
-        "AROUSAL-HYPOPNEA": models.AASMEvent.AROUSAL_RES,  # Remlogic
-        "AROUSAL-APNEA": models.AASMEvent.AROUSAL_RES,  # Remlogic
-        "AROUSAL-DESAT": models.AASMEvent.AROUSAL_RES,  # Remlogic
-        "AROUSAL-SPONT": models.AASMEvent.AROUSAL_SPONT,  # Remlogic
-        "Arousal autonome": models.AASMEvent.AROUSAL_SPONT,  # Remlogic
-        "AROUSAL-PLM": models.AASMEvent.AROUSAL_PLM,  # Remlogic
-        "Mouvement + arousal": models.AASMEvent.AROUSAL_LM,  # Deltamed
-        "AROUSAL-LM": models.AASMEvent.AROUSAL_LM,  # Remlogic
-        "AROUSAL-RERA": models.AASMEvent.RERA,
-        "Apnée": models.AASMEvent.APNEA,  # Deltamed
-        "APNEA": models.AASMEvent.APNEA,  # Remlogic
-        "Apnée Centrale": models.AASMEvent.APNEA_CENTRAL,  # Deltamed
-        "APNEA-CENTRAL": models.AASMEvent.APNEA_CENTRAL,  # Remlogic
-        "Apnée centrale": models.AASMEvent.APNEA_CENTRAL,  # csv
-        "Apnée Obstructive": models.AASMEvent.APNEA_OBSTRUCTIVE,  # Deltamed
-        "APNEA-OBSTRUCTIVE": models.AASMEvent.APNEA_OBSTRUCTIVE,  # Remlogic
-        "Apnée obstructive": models.AASMEvent.APNEA_OBSTRUCTIVE,  # csv
-        "Apnée Mixte": models.AASMEvent.APNEA_MIXED,  # Deltamed
-        "APNEA-MIXED": models.AASMEvent.APNEA_MIXED,  # Remlogic
-        "Apnée mixte": models.AASMEvent.APNEA_MIXED,  # Remlogic
-        #'Hypopnée': models.AASMEvent.HYPOPNEA, # Deltamed - This is obstructive by default (confirmed by Marion from sleep lab)
-        "HYPOPNEA": models.AASMEvent.HYPOPNEA,  # Remlogic - These are unclassified hypopneas (confirmed by Marion from sleep lab)
-        "hypopnée": models.AASMEvent.HYPOPNEA,  # csv
-        "hypopnée Centrale": models.AASMEvent.HYPOPNEA_CENTRAL,  # Deltamed
-        "HYPOPNEA-CENTRAL": models.AASMEvent.HYPOPNEA_CENTRAL,  # Remlogic
-        "Hypopnée centrale": models.AASMEvent.HYPOPNEA_CENTRAL,  # csv
-        "Hypopnée": models.AASMEvent.HYPOPNEA_OBSTRUCTIVE,  # Deltamed - This is obstructive by default (confirmed by Marion from sleep lab)
-        "HYPOPNEA-OBSTRUCTIVE": models.AASMEvent.HYPOPNEA_OBSTRUCTIVE,  # Remlogic
-        "hypopnée Obstructive": models.AASMEvent.HYPOPNEA_OBSTRUCTIVE,  # Deltamed
-        "Hypopnée obstructive": models.AASMEvent.HYPOPNEA_OBSTRUCTIVE,  # csv
-        # There are also mixed hypopneas scored in the data 'Hypopnée Mixte' check all annotation file for these
-        # because sleeplab format does not support this as an AASMEvent currently
-        # Should we group these into HYPOPNEA? Only around 20 found in the whole dataset
-        #'Désaturation': models.AASMEvent.SPO2_DESAT, #Deltamed # UPDATE: this is automatic scoring
-        #'DESAT': models.AASMEvent.SPO2_DESAT, #Remlogic # UPDATE: this is automatic scoring
-        "Chute de la saturation": models.AASMEvent.SPO2_DESAT,  # csv
-        #'Ronflements simples':models.AASMEvent.SNORE, #Deltamed UPDATE: this is automatic scoring
-        #'SNORE-SINGLE':models.AASMEvent.SNORE, #Remlogic # UPDATE: this is automatic scoring
-        "Périodes de ronflement": models.AASMEvent.SNORE,  # csv
-    }
-
-    if row["Event_label"] in aasm_event_map.keys():
+    if row["Event_label"] in AASM_EVENT_MAPPING.keys():
         if "Validated" in row.keys():
             if row["Validated"] == "Yes":
                 return models.Annotation[models.AASMEvent](
-                    name=aasm_event_map[row["Event_label"]],
+                    name=AASM_EVENT_MAPPING[row["Event_label"]],
                     start_ts=row["Start_time"],
                     start_sec=row["Time_from_start"],
                     duration=row["Duration"],
@@ -164,7 +85,7 @@ def parse_for_aasm_annotation(row) -> models.Annotation[models.AASMEvent]:
                 return None
         else:
             return models.Annotation[models.AASMEvent](
-                name=aasm_event_map[row["Event_label"]],
+                name=AASM_EVENT_MAPPING[row["Event_label"]],
                 start_ts=row["Start_time"],
                 start_sec=row["Time_from_start"],
                 duration=row["Duration"],
@@ -173,42 +94,40 @@ def parse_for_aasm_annotation(row) -> models.Annotation[models.AASMEvent]:
         return None
 
 
-def parse_annotations(header, edf_path, edf_name) -> tuple[
+def parse_annotations(header: Dict[str, Any], edf_path: Path, edf_name: str) -> tuple[
     list[models.Annotation[models.AASMEvent]],  # Events
     list[models.Annotation[models.AASMSleepStage]],  # Hypnogram
     list[models.Annotation[str]],  # Other annotations
-    dt | None,  # Analysis start
-    dt | None,  # Analysis end
-    dt | None,  # Lights off
-    dt | None,  # Lights on
+    datetime | None,  # Analysis start
+    datetime | None,  # Analysis end
+    datetime | None,  # Lights off
+    datetime | None,  # Lights on
     str | None,
-]:  # recording type
+]:
 
-    events = []
-    AASMSleepStages = []
-    AASMevents = []
+    events: List = []
+    aasm_sleep_stages: List = []
+    aasm_events: List = []
 
     analysis_start = None
     analysis_end = None
     lights_on = None
     lights_off = None
 
-    patient = edf_path.name + "/"
-    path = str(edf_path.resolve()).strip(patient)
+    patient: str = edf_path.name
+    path: Path = edf_path.parent.resolve()
 
-    annot_df, REC_TYPE = annotation.loadAnnotation(path, patient, edf_name)
+    annot_df, recording_type = annotation.load_annotation(path, patient, edf_name)
 
-    if type(header["startdate"]) is dt:
+    if type(header["startdate"]) is datetime:
         st_rec = header["startdate"]
     else:
-        st_rec = dt.strptime(
-            header["startdate"] + "-" + header["starttime"], "%d.%m.%y-%H.%M.%S"
-        )
+        datetime_str: str = f"{header["startdate"]}-{header["starttime"]}"
+        datetime_format: str = "%d.%m.%y-%H.%M.%S"
+        st_rec = datetime.strptime(datetime_str, datetime_format)
 
     if annot_df is not None:
         if st_rec != annot_df.iloc[0]["Start_time"]:
-            # print('Warning: annotations start different from recording start') # Don't really need to warn about this
-            # logger.info(f'Updating event lag respect to recording start')
             for n in range(
                 0, len(annot_df)
             ):  # Update event lag from start of recording
@@ -218,7 +137,6 @@ def parse_annotations(header, edf_path, edf_name) -> tuple[
                 annot_df.loc[n, "Time_from_start"] = dif.seconds
 
         for index, row in annot_df.iterrows():
-
             # push all events with original labels into event list
             events.append(
                 models.Annotation[str](
@@ -230,15 +148,15 @@ def parse_annotations(header, edf_path, edf_name) -> tuple[
             )
 
             # push only sleep stages into AASM sleep stage list
-            AASMSleepStage = parse_sleep_stage(row)
-            if AASMSleepStage is not None:
-                AASMSleepStages.append(AASMSleepStage)
+            aasm_sleep_stage = parse_sleep_stage(row)
+            if aasm_sleep_stage is not None:
+                aasm_sleep_stages.append(aasm_sleep_stage)
 
             # push only AASM standard events here
-            AASMevent = parse_for_aasm_annotation(row)
+            aasm_event = parse_for_aasm_annotation(row)
 
-            if AASMevent is not None:
-                AASMevents.append(AASMevent)
+            if aasm_event is not None:
+                aasm_events.append(aasm_event)
 
             # Find analysis start and end times
             if row["Event_label"] == "ANALYSIS-START":
@@ -271,40 +189,28 @@ def parse_annotations(header, edf_path, edf_name) -> tuple[
         if analysis_end is None:
             analysis_end = events[-1].start_ts + timedelta(seconds=events[-1].duration)
 
-        # if annotations for lights were not found.
-
-        return (
-            events,
-            AASMSleepStages,
-            AASMevents,
-            analysis_start,
-            analysis_end,
-            lights_off,
-            lights_on,
-            REC_TYPE,
-        )
-    else:
-        return (
-            events,
-            AASMSleepStages,
-            AASMevents,
-            analysis_start,
-            analysis_end,
-            lights_off,
-            lights_on,
-            REC_TYPE,
-        )
+    return (
+        events,
+        aasm_sleep_stages,
+        aasm_events,
+        analysis_start,
+        analysis_end,
+        lights_off,
+        lights_on,
+        recording_type,
+    )
 
 
-def parse_edf(_edf_path: str) -> tuple[dt,]:
+def parse_edf(_edf_path: Path) -> tuple[datetime, Dict, Dict[str, Any]]:
+    """Loads an EDF file and returns the start time, signal data, and header."""
 
     try:
         sig_load_funcs, sig_headers, header = edf.read_edf_export(
-            Path(_edf_path), annotations=False
+            _edf_path, annotations=False
         )
     except:
         sig_load_funcs, sig_headers, header = edf.read_edf_export_mne(
-            _edf_path, annotations=False
+            str(_edf_path), annotations=False
         )
 
     start_ts, sample_arrays = parse_samplearrays(sig_load_funcs, sig_headers, header)
@@ -312,45 +218,42 @@ def parse_edf(_edf_path: str) -> tuple[dt,]:
     return start_ts, sample_arrays, header
 
 
-def read_series(src_dir_series: Path, series_name: str) -> models.Series:
+def read_series(input_dir_series: Path, series_name: str) -> Tuple[models.Series, Dict]:
     """Read data from `edf file` + `annotation file` and parse to sleeplab Series."""
-    subjects = {}
-    error_counts = {
+
+    subjects: Dict = {}
+    error_counts: Dict[str, int] = {
         "EDF_does_not_exist": 0,
         "edf_reader_not_working": 0,
         "annot_parse_error": 0,
     }
-    for edf_path in src_dir_series.iterdir():
+    for edf_path in input_dir_series.iterdir():
+        is_multi_edf: bool = False
 
-        MULTI_EDF = False  # Flag for having multiple edf in the same file (patient has multiple visits)
+        edf_list: List[Path] = list(edf_path.glob("*.edf"))
 
-        edf_list = glob.glob(str(edf_path.resolve()) + "/" + "*.edf")
-
-        if len(edf_list) == 0:  # Check if no edf file exists in the the patient folder
+        if not edf_list:
             logger.info(f"Skipping subject with no .edf file: {edf_path.stem}")
             error_counts["EDF_does_not_exist"] += 1
             continue
 
-        if (
-            len(edf_list) > 1
-        ):  # Check if there are more than one edf file (also then multiple annotation files are expected)
+        if len(edf_list) > 1:
             logger.info(f"Multiple .edf files detected: {edf_path.stem}")
-            MULTI_EDF = True
+            is_multi_edf = True
 
         logger.info(f"Start parsing subject {edf_path.name}")
 
-        for edfs in edf_list:  # loop through the edf files
-
+        for edf_file in edf_list:  # loop through the edf files
             if (
-                edfs.split("-")[-2][-2:] != "T1"
+                "T1-" not in edf_file.name
             ):  # edf needs to be PSG recording (12 and 13 are MSLT and MWT recordings)
                 continue
 
             try:  # Read signals from edf files
-                start_ts, sample_arrays, header = parse_edf(edfs)
+                start_ts, sample_arrays, header = parse_edf(edf_file)
             except Exception as e:
                 logger.warning(
-                    f"Skipping subject {edf_path.stem} and file {edfs} due to error in EDF parsing:"
+                    f"Skipping subject {edf_path.stem} and file {edf_file} due to error in EDF parsing:"
                 )
                 logger.warning(e)
                 error_counts["edf_reader_not_working"] += 1
@@ -358,35 +261,32 @@ def read_series(src_dir_series: Path, series_name: str) -> models.Series:
             try:  # Read annotations that correspond to edf filename (will fail if files are not correctly named or don't follow the normal structure)
                 (
                     events,
-                    AASMSleepStages,
-                    AASMevents,
+                    aasm_sleep_stages,
+                    aasm_events,
                     analysis_start,
                     analysis_end,
                     lights_off,
                     lights_on,
-                    rec_type,
-                ) = parse_annotations(
-                    header, edf_path, edf_name=edfs.split("\\")[-1].split(".")[0]
-                )
+                    recording_type,
+                ) = parse_annotations(header, edf_path, edf_name=edf_file.stem)
                 if not events:
                     (
                         events,
-                        AASMSleepStages,
-                        AASMevents,
+                        aasm_sleep_stages,
+                        aasm_events,
                         analysis_start,
                         analysis_end,
                         lights_off,
                         lights_on,
-                        rec_type,
+                        recording_type,
                     ) = parse_annotations(
                         header,
                         edf_path,
-                        edf_name=edfs.split("\\")[-1].split(".")[0].split()[0],
+                        edf_name=edf_file.stem,
                     )
-                    if not events:
-                        logger.warning(
-                            f"Cannot find annotations for subject {edf_path.stem}"
-                        )
+                    logger.warning(
+                        f"Cannot find annotations for subject {edf_path.stem}"
+                    )
             except Exception as e:
                 logger.warning(
                     f"Skipping subject {edf_path.stem} due to error in annotation parsing:"
@@ -403,24 +303,23 @@ def read_series(src_dir_series: Path, series_name: str) -> models.Series:
                         annotations=events, scorer="original"
                     ),
                     "manual_hypnogram": models.Hypnogram(
-                        annotations=AASMSleepStages, scorer="manual"
+                        annotations=aasm_sleep_stages, scorer="manual"
                     ),
                     "manual_aasmevents": models.AASMEvents(
-                        annotations=AASMevents, scorer="manual"
+                        annotations=aasm_events, scorer="manual"
                     ),
                 }
 
-            if MULTI_EDF:
+            if is_multi_edf:
+                subject_id: str = f"{edf_path.stem}_V{edf_file.stem.split()[0].split("V")[-1]}"
                 metadata = models.SubjectMetadata(
-                    subject_id=edf_path.stem
-                    + "_V"
-                    + edfs.split("\\")[-1].split(".")[0].split()[0].split("V")[-1],
+                    subject_id=subject_id,
                     recording_start_ts=start_ts,
                     analysis_start=analysis_start,
                     analysis_end=analysis_end,
                     lights_off=lights_off,
                     lights_on=lights_on,
-                    additional_info={"recording_device": rec_type},
+                    additional_info={"recording_device": recording_type},
                 )
             else:
                 metadata = models.SubjectMetadata(
@@ -430,7 +329,7 @@ def read_series(src_dir_series: Path, series_name: str) -> models.Series:
                     analysis_end=analysis_end,
                     lights_off=lights_off,
                     lights_on=lights_on,
-                    additional_info={"recording_device": rec_type},
+                    additional_info={"recording_device": recording_type},
                 )
 
             subjects[metadata.subject_id] = models.Subject(
@@ -443,76 +342,62 @@ def read_series(src_dir_series: Path, series_name: str) -> models.Series:
 
 
 ALL_SERIES = [
-    "2014",
+    "2023",
     "2024",
     "2025",
 ]
 
 
 def convert_dataset(
-    src_dir: Path,
-    dst_dir: Path,
+    input_dir: Path,
+    output_dir: Path,
     ds_name: str = "MARS",
-    series: list[str] = ALL_SERIES,
-    array_format: str = "zarr",
+    series: List[str] = ALL_SERIES,
+    array_format: str = "numpy",
     clevel: int = 7,
     annotation_format: str = "json",
 ) -> None:
+    """
+    Converts a dataset from a source directory to sleeplab format and structure in a destination directory.
+    It processes multiple data series (years), logs any conversion errors.
+    Saves slf files in the output directory.
+    """
 
-    series_dict = {}
-    all_error_counts = {}
+    series_dict: Dict = {}
+    all_error_counts: Dict = {}
 
-    logger.info(f"Converting the data from {src_dir} to {dst_dir}...")
-    logger.info(f"Start reading the data from {src_dir}...")
+    logger.info(f"Converting the data from {input_dir} to {output_dir}...")
+    logger.info(f"Start reading the data from {input_dir}...")
 
     for series_name in series:
         logger.info(f"Converting series {series_name}...")
-        src_dir_series = src_dir.joinpath(series_name)
-        _series, _error_counts = read_series(src_dir_series, series_name)
+        input_dir_series = input_dir.joinpath(series_name)
+        _series, _error_counts = read_series(input_dir_series, series_name)
         series_dict[series_name] = _series
         all_error_counts[series_name] = _error_counts
 
-    error_count_path = dst_dir / "conversion_error_counts.json"
+    error_count_path: Path = output_dir / "conversion_error_counts.json"
     logger.info(f"Writing error counts to {error_count_path}")
     with open(error_count_path, "a+") as f:
         json.dump(all_error_counts, f, indent=4)
 
     dataset = models.Dataset(name=ds_name, series=series_dict)
-    logger.info(f"Start writing the data to {dst_dir}...")
+    logger.info(f"Start writing the data to {output_dir}...")
     writer.write_dataset(
         dataset,
-        basedir=dst_dir,
+        basedir=str(output_dir),
         annotation_format=annotation_format,
         array_format=array_format,
         compression_level=clevel,
     )
 
 
-def create_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--src_dir", type=Path, required=True)
-    parser.add_argument("--dst_dir", type=Path, required=True)
-    parser.add_argument("--ds_name", type=str, default="MARS")
-    parser.add_argument("--series", nargs="*", default=ALL_SERIES)
-    parser.add_argument("--array-format", default="zarr", help="The SLF array format.")
-    parser.add_argument(
-        "--clevel",
-        type=int,
-        default=7,
-        help="Zstd compression level if array format is zarr.",
-    )
-    parser.add_argument(
-        "--annotation-format", default="json", help="The SLF annotation format."
-    )
-    return parser
-
-
 if __name__ == "__main__":
-    parser = create_parser()
-    args = parser.parse_args()
-    assert set(args.series).issubset(
-        set(ALL_SERIES)
-    ), f"Series {set(args.series) - set(ALL_SERIES)} not in {ALL_SERIES}"
-    logger.info(f"MARS conversion args: {vars(args)}")
-    convert_dataset(**vars(args))
-    logger.info(f"Conversion done.")
+    input_dir = Path(__file__).resolve().parent.parent / "input"
+    output_dir = Path(__file__).resolve().parent.parent / "output"
+    convert_dataset(
+        input_dir=input_dir,
+        output_dir=output_dir,
+        ds_name="MARS",
+        series=["2021"],
+    )
