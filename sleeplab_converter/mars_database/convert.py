@@ -95,9 +95,9 @@ def parse_for_aasm_annotation(row) -> models.Annotation[models.AASMEvent]:
 
 
 def parse_annotations(header: Dict[str, Any], edf_path: Path, edf_name: str) -> tuple[
-    list[models.Annotation[models.AASMEvent]],  # Events
-    list[models.Annotation[models.AASMSleepStage]],  # Hypnogram
-    list[models.Annotation[str]],  # Other annotations
+    List[models.Annotation[str]],  # Events
+    List[models.Annotation[models.AASMSleepStage]],  # Hypnogram
+    List[models.Annotation[models.AASMEvent]],  # Other annotations
     datetime | None,  # Analysis start
     datetime | None,  # Analysis end
     datetime | None,  # Lights off
@@ -105,9 +105,9 @@ def parse_annotations(header: Dict[str, Any], edf_path: Path, edf_name: str) -> 
     str | None,
 ]:
 
-    events: List = []
-    aasm_sleep_stages: List = []
-    aasm_events: List = []
+    events: List[models.Annotation[str]] = []
+    aasm_sleep_stages: List[models.Annotation[models.AASMSleepStage]] = []
+    aasm_events: List[models.Annotation[models.AASMEvent]] = []
 
     analysis_start = None
     analysis_end = None
@@ -198,6 +198,49 @@ def parse_annotations(header: Dict[str, Any], edf_path: Path, edf_name: str) -> 
         lights_off,
         lights_on,
         recording_type,
+    )
+
+
+def convert_dataset(
+    input_dir: Path,
+    output_dir: Path,
+    series: str,
+    ds_name: str = "MARS",
+    array_format: str = "numpy",
+    clevel: int = 7,
+    annotation_format: str = "json",
+) -> None:
+    """
+    Converts a dataset from a source directory to sleeplab format and structure in a destination directory.
+    It processes multiple data series (years), logs any conversion errors.
+    Saves slf files in the output directory.
+    """
+
+    series_dict: Dict = {}
+    all_error_counts: Dict = {}
+
+    logger.info(f"Converting the data from {input_dir} to {output_dir}...")
+    logger.info(f"Start reading the data from {input_dir}...")
+
+    logger.info(f"Converting series {series}...")
+    input_dir_series = input_dir.joinpath(series)
+    _series, _error_counts = read_series(input_dir_series, series)
+    series_dict[series] = _series
+    all_error_counts[series] = _error_counts
+
+    error_count_path: Path = output_dir / "conversion_error_counts.json"
+    logger.info(f"Writing error counts to {error_count_path}")
+    with open(error_count_path, "a+") as f:
+        json.dump(all_error_counts, f, indent=4)
+
+    dataset = models.Dataset(name=ds_name, series=series_dict)
+    logger.info(f"Start writing the data to {output_dir}...")
+    writer.write_dataset(
+        dataset,
+        basedir=str(output_dir),
+        annotation_format=annotation_format,
+        array_format=array_format,
+        compression_level=clevel,
     )
 
 
@@ -311,7 +354,9 @@ def read_series(input_dir_series: Path, series_name: str) -> Tuple[models.Series
                 }
 
             if is_multi_edf:
-                subject_id: str = f"{edf_path.stem}_V{edf_file.stem.split()[0].split("V")[-1]}"
+                subject_id: str = (
+                    f"{edf_path.stem}_V{edf_file.stem.split()[0].split("V")[-1]}"
+                )
                 metadata = models.SubjectMetadata(
                     subject_id=subject_id,
                     recording_start_ts=start_ts,
@@ -341,63 +386,12 @@ def read_series(input_dir_series: Path, series_name: str) -> Tuple[models.Series
     return series, error_counts
 
 
-ALL_SERIES = [
-    "2023",
-    "2024",
-    "2025",
-]
-
-
-def convert_dataset(
-    input_dir: Path,
-    output_dir: Path,
-    ds_name: str = "MARS",
-    series: List[str] = ALL_SERIES,
-    array_format: str = "numpy",
-    clevel: int = 7,
-    annotation_format: str = "json",
-) -> None:
-    """
-    Converts a dataset from a source directory to sleeplab format and structure in a destination directory.
-    It processes multiple data series (years), logs any conversion errors.
-    Saves slf files in the output directory.
-    """
-
-    series_dict: Dict = {}
-    all_error_counts: Dict = {}
-
-    logger.info(f"Converting the data from {input_dir} to {output_dir}...")
-    logger.info(f"Start reading the data from {input_dir}...")
-
-    for series_name in series:
-        logger.info(f"Converting series {series_name}...")
-        input_dir_series = input_dir.joinpath(series_name)
-        _series, _error_counts = read_series(input_dir_series, series_name)
-        series_dict[series_name] = _series
-        all_error_counts[series_name] = _error_counts
-
-    error_count_path: Path = output_dir / "conversion_error_counts.json"
-    logger.info(f"Writing error counts to {error_count_path}")
-    with open(error_count_path, "a+") as f:
-        json.dump(all_error_counts, f, indent=4)
-
-    dataset = models.Dataset(name=ds_name, series=series_dict)
-    logger.info(f"Start writing the data to {output_dir}...")
-    writer.write_dataset(
-        dataset,
-        basedir=str(output_dir),
-        annotation_format=annotation_format,
-        array_format=array_format,
-        compression_level=clevel,
-    )
-
-
 if __name__ == "__main__":
     input_dir = Path(__file__).resolve().parent.parent / "input"
     output_dir = Path(__file__).resolve().parent.parent / "output"
     convert_dataset(
         input_dir=input_dir,
         output_dir=output_dir,
+        series="2021",
         ds_name="MARS",
-        series=["2021"],
     )
