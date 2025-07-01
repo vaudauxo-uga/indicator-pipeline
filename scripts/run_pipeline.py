@@ -18,7 +18,7 @@ def main():
     )
     sftp.connect()
 
-    files = sftp.list_files()
+    files = sftp.sftp.listdir(os.path.join("home", "hp2", "Raw_data", "PSG_data_MARS", "C1"))
     print("Fichiers disponibles :", files)
 
     sftp.close()
