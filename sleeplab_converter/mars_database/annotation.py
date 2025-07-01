@@ -308,7 +308,6 @@ def annotation_deltamed(path: Path, patient: str, edf_name: str):
     return events_df
 
 
-## Import REMLOGIC annotations
 def annotation_remlogic(txt_path: Path):
     sleep_stages: List[str] = [
         "SLEEP-S0",
@@ -345,7 +344,6 @@ def annotation_remlogic(txt_path: Path):
     if format_type is None:
         raise ValueError("Aucun format d'en-tête reconnu dans le fichier texte.")
 
-    # Colonnes selon le format détecté
     columns_by_format: Dict[str, List[str]] = {
         "standard": ["SleepStage", "Position", "Start_time", "Event_label", "Duration"],
         "extra_channel": [
