@@ -159,7 +159,7 @@ def time_from_start_to_seconds(rtf_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def annotation_deltamed(path: Path, patient: str, edf_name: str):
-    txt_path: Path = path / patient / f"{edf_name}.txt"
+    txt_path: Path = path / patient / f"{edf_name.strip()}.txt"
     txt_events_df: pd.DataFrame = pd.read_table(
         txt_path,
         skiprows=5,
@@ -244,7 +244,7 @@ def annotation_deltamed(path: Path, patient: str, edf_name: str):
 
     ##############################
     # Read events from RTF
-    rtf_path: Path = path / patient / f"{edf_name}.rtf"
+    rtf_path: Path = path / patient / f"{edf_name.strip()}.rtf"
     with rtf_path.open("r", encoding="latin1") as rtf_file:
         sample_text: str = rtf_file.read()
         text = rtf_to_text(sample_text, encoding="latin1")
@@ -408,7 +408,7 @@ def annotation_remlogic(txt_path: Path):
 
 def annotation_csv(path: Path, patient: str, edf_name: str):
 
-    csv_path: Path = path / patient / f"{edf_name}.csv"
+    csv_path: Path = path / patient / f"{edf_name.strip()}.csv"
     data_csv: pd.DataFrame = pd.read_csv(csv_path, encoding="UTF-16", delimiter="\t")
 
     # Parse start date and time in to one column of datetime
@@ -449,7 +449,7 @@ def annotation_csv(path: Path, patient: str, edf_name: str):
     data_csv.loc[:, "Event_label"] = event_labels
 
     # Parse sleep stages from edf+ header
-    edf_path: Path = path / patient / f"{edf_name}.edf"
+    edf_path: Path = path / patient / f"{edf_name.strip()}.edf"
     try:
         header = edf.read_edf_export(edf_path, annotations=True)[-1]
         st_rec: datetime = header["startdate"]
@@ -501,12 +501,12 @@ def load_annotation(path: Path, patient: str, edf_name: str):
     # todo: could try to identify the correct files based on annotation and recording datetimes
 
     # First check if .rtf file exists - this is the most common recording type and .rtf should always exist
-    rtf_path: Path = path / patient / f"{edf_name}.rtf"
+    rtf_path: Path = path / patient / f"{edf_name.strip()}.rtf"
     if rtf_path.is_file():
         data = annotation_deltamed(path, patient, edf_name)
         recording_type: str = "Deltamed"
     else:
-        txt_path: Path = path / patient / f"{edf_name}.txt"
+        txt_path: Path = path / patient / f"{edf_name.strip()}.txt"
         if txt_path.is_file():
             with txt_path.open("rb") as txt_file:
                 sample_text = txt_file.read()
@@ -523,11 +523,9 @@ def load_annotation(path: Path, patient: str, edf_name: str):
                 return None, recording_type
         else:  # if no .rtf file or .txt file with correct filename
             # Check for .csv annotations
-            report_path: Path = path / patient / f"{edf_name}.csv"
+            report_path: Path = path / patient / f"{edf_name.strip()}.csv"
             if report_path.is_file():
-                data = annotation_csv(
-                    path, patient, edf_name
-                )  # Loading data with the function adapted to .csv annotations
+                data = annotation_csv(path, patient, edf_name)
                 recording_type = "BrainRT"
             else:
                 recording_type = "Unknown"
