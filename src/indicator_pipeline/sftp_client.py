@@ -1,3 +1,6 @@
+import stat
+from pathlib import Path
+
 import paramiko
 import logging
 
@@ -40,6 +43,22 @@ class SFTPClient:
 
     def download_file(self, remote_path, local_path):
         self.sftp.get(remote_path, local_path)
+
+    def is_dir(self, path) -> bool:
+        try:
+            return stat.S_ISDIR(self.sftp.stat(path).st_mode)
+        except IOError:
+            return False
+
+    def download_folder_recursive(self, remote_path: str, local_path: Path):
+        local_path.mkdir(parents=True, exist_ok=True)
+        for item in self.sftp.listdir(remote_path):
+            remote_item: str = remote_path + "/" + item
+            local_item = local_path / item
+            if self.is_dir(remote_item):
+                self.download_folder_recursive(remote_item, local_item)
+            else:
+                self.sftp.get(remote_item, str(local_item))
 
     def close(self):
         if self.sftp:
