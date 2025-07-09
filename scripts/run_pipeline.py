@@ -1,8 +1,10 @@
 import os
+from pathlib import PurePosixPath
 
 from dotenv import load_dotenv
 
 from src.indicator_pipeline.sftp_client import SFTPClient
+from src.indicator_pipeline.slf_conversion import convert_folder_to_slf
 
 load_dotenv()
 
@@ -18,8 +20,12 @@ def main():
     )
     sftp.connect()
 
-    files = sftp.sftp.listdir(os.path.join("home", "hp2", "Raw_data", "PSG_data_MARS", "C1"))
-    print("Fichiers disponibles :", files)
+    year: str = "2025"
+    year_dir: PurePosixPath = PurePosixPath().joinpath(
+        "home", "hp2", "Raw_data", "PSG_data_MARS", "C1", year
+    )
+
+    convert_folder_to_slf(year_dir, sftp)
 
     sftp.close()
 
