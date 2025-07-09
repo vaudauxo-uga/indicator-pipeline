@@ -29,7 +29,6 @@ def convert_folder_to_slf(year_dir: PurePosixPath, sftp_client: SFTPClient):
 
     outside_repo_dir = repo_root.parent
     local_output_root = outside_repo_dir / "slf-output"
-    print(local_output_root)
     local_output_root.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory() as tmp_root_dir:
@@ -62,3 +61,32 @@ def convert_folder_to_slf(year_dir: PurePosixPath, sftp_client: SFTPClient):
             series=year_dir.name,
             ds_name="slf_to_compute",
         )
+
+
+def upload_slf_folders_to_server(
+    local_output_root: Path, remote_year_dir: PurePosixPath, sftp_client: SFTPClient
+):
+    """
+    Uploads all SLF folders from a local output directory to the corresponding year directory on the remote server.
+
+    Args:
+        local_output_root (Path): Path to the local 'slf-output' directory.
+        remote_year_dir (PurePosixPath): Remote directory for the target year (e.g., /.../C1/2025).
+        sftp_client (SFTPClient): Active SFTP client.
+    """
+
+    local_year_dir: Path = local_output_root / "slf_to_compute" / remote_year_dir.name
+    if not local_year_dir.exists():
+        logger.warning(f"Local year directory not found: {local_year_dir}")
+        return
+
+    for patient_folder in local_year_dir.iterdir():
+        if not patient_folder.is_dir():
+            continue
+
+        patient_id: str = patient_folder.name.split("_")[0]
+        slf_remote_name = f"slf_{patient_folder.name}"
+
+        remote_patient_dir = remote_year_dir / patient_id / slf_remote_name
+        logger.info(f"[UPLOAD] Uploading {patient_folder} to {remote_patient_dir}")
+        sftp_client.upload_folder_recursive(patient_folder, str(remote_patient_dir))
