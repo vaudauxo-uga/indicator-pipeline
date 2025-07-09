@@ -1,6 +1,7 @@
 import logging
 import tempfile
 from pathlib import Path, PurePosixPath
+from typing import List
 
 from sleeplab_converter.mars_database.convert import convert_dataset
 from src.indicator_pipeline.sftp_client import SFTPClient
@@ -40,11 +41,15 @@ def convert_folder_to_slf(year_dir: PurePosixPath, sftp_client: SFTPClient):
         patients = sftp_client.list_files(str(year_dir))
         for patient_id in patients:
             remote_patient_path: PurePosixPath = year_dir / patient_id
-            slf_folder_name: str = f"slf_{patient_id}_V1"
-            remote_slf_path: PurePosixPath = remote_patient_path / slf_folder_name
+            existing_folders = sftp_client.list_files(str(remote_patient_path))
+            slf_folders: List[str] = [
+                name
+                for name in existing_folders
+                if name.startswith(f"slf_{patient_id}")
+            ]
 
-            if slf_folder_name in sftp_client.list_files(str(remote_patient_path)):
-                logger.info(f"[SKIP] SLF already exists: {remote_slf_path}")
+            if slf_folders:
+                logger.info(f"[SKIP] SLF already exists")
                 continue
 
             local_patient_dir: Path = local_year_dir / patient_id
