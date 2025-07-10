@@ -60,6 +60,23 @@ class SFTPClient:
             else:
                 self.sftp.get(remote_item, str(local_item))
 
+    def upload_folder_recursive(self, local_path: Path, remote_path: str):
+        """Uploads a local directory to the SFTP server recursively."""
+
+        local_path = Path(local_path)
+
+        try:
+            self.sftp.stat(remote_path)
+        except FileNotFoundError:
+            self.sftp.mkdir(remote_path)
+
+        for item in local_path.iterdir():
+            remote_item = remote_path + "/" + item.name
+            if item.is_dir():
+                self.upload_folder_recursive(item, remote_item)
+            else:
+                self.sftp.put(str(item), remote_item)
+
     def close(self):
         if self.sftp:
             self.sftp.close()
