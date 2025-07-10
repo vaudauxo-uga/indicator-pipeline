@@ -1,5 +1,6 @@
 import os
 from pathlib import PurePosixPath, Path
+from typing import List
 
 from dotenv import load_dotenv
 
@@ -24,14 +25,16 @@ def main():
     )
     sftp.connect()
 
-    year: str = "2025"
-    server_year_dir: PurePosixPath = PurePosixPath().joinpath(
-        "home", "hp2", "Raw_data", "PSG_data_MARS", "C1", year
-    )
-    local_slf_output: Path = get_local_slf_output()
+    years: List[str] = ["2020", "2023"]
 
-    convert_folder_to_slf(local_slf_output, server_year_dir, sftp)
-    upload_slf_folders_to_server(local_slf_output, server_year_dir, sftp_client=sftp)
+    for year in years:
+        server_year_dir: PurePosixPath = PurePosixPath().joinpath(
+            "home", "hp2", "Raw_data", "PSG_data_MARS", "C1", year
+        )
+        local_slf_output: Path = get_local_slf_output()
+
+        convert_folder_to_slf(local_slf_output, server_year_dir, sftp)
+        upload_slf_folders_to_server(local_slf_output, server_year_dir, sftp_client=sftp)
 
     sftp.close()
 
