@@ -368,14 +368,3 @@ def read_series(input_dir_series: Path, series_name: str) -> Tuple[models.Series
     series = models.Series(name=series_name, subjects=subjects)
 
     return series, error_counts
-
-
-if __name__ == "__main__":
-    input_dir = Path(__file__).resolve().parent.parent / "input"
-    output_dir = Path(__file__).resolve().parent.parent / "output"
-    convert_dataset(
-        input_dir=input_dir,
-        output_dir=output_dir,
-        series="2021",
-        ds_name="MARS",
-    )
