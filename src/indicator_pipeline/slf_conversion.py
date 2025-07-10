@@ -9,7 +9,9 @@ from src.indicator_pipeline.sftp_client import SFTPClient
 logger = logging.getLogger(__name__)
 
 
-def convert_folder_to_slf(year_dir: PurePosixPath, sftp_client: SFTPClient):
+def convert_folder_to_slf(
+    local_slf_output: Path, year_dir: PurePosixPath, sftp_client: SFTPClient
+):
     """
     Downloads all patient folders for a given year from a remote SFTP server in a temporary folder,
     skips those that already contain an SLF output folder,
@@ -17,20 +19,13 @@ def convert_folder_to_slf(year_dir: PurePosixPath, sftp_client: SFTPClient):
     The resulting .slf folders are saved outside the Git repository, in a sibling folder named 'slf-output'.
 
     Args:
+        local_slf_output (Path): Path to the local slf output folder.
         year_dir (PurePosixPath): Remote path to the year folder on the SFTP server (e.g., /.../C1/2025).
         sftp_client (SFTPClient): An active SFTP client for accessing and downloading remote data.
 
     Returns:
         None
     """
-
-    repo_root = Path(__file__).resolve().parent
-    while ".git" not in [p.name for p in repo_root.iterdir()]:
-        repo_root = repo_root.parent
-
-    outside_repo_dir = repo_root.parent
-    local_output_root = outside_repo_dir / "slf-output"
-    local_output_root.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory() as tmp_root_dir:
         tmp_root_path: Path = Path(tmp_root_dir)
@@ -62,25 +57,25 @@ def convert_folder_to_slf(year_dir: PurePosixPath, sftp_client: SFTPClient):
 
         convert_dataset(
             input_dir=tmp_root_path,
-            output_dir=local_output_root,
+            output_dir=local_slf_output,
             series=year_dir.name,
             ds_name="slf_to_compute",
         )
 
 
 def upload_slf_folders_to_server(
-    local_output_root: Path, remote_year_dir: PurePosixPath, sftp_client: SFTPClient
+    local_slf_output: Path, remote_year_dir: PurePosixPath, sftp_client: SFTPClient
 ):
     """
     Uploads all SLF folders from a local output directory to the corresponding year directory on the remote server.
 
     Args:
-        local_output_root (Path): Path to the local 'slf-output' directory.
+        local_slf_output (Path): Path to the local 'slf-output' directory.
         remote_year_dir (PurePosixPath): Remote directory for the target year (e.g., /.../C1/2025).
         sftp_client (SFTPClient): Active SFTP client.
     """
 
-    local_year_dir: Path = local_output_root / "slf_to_compute" / remote_year_dir.name
+    local_year_dir: Path = local_slf_output / "slf_to_compute" / remote_year_dir.name
     if not local_year_dir.exists():
         logger.warning(f"Local year directory not found: {local_year_dir}")
         return
