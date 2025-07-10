@@ -8,6 +8,7 @@ from typing import Any, Callable, Dict, List, Tuple
 import numpy as np
 from sleeplab_format import writer, models
 
+from scripts.utils import extract_subject_id_from_filename
 from sleeplab_converter import edf
 from sleeplab_converter.events_mapping import STAGE_MAPPING, AASM_EVENT_MAPPING
 from sleeplab_converter.mars_database import annotation
@@ -271,7 +272,6 @@ def read_series(input_dir_series: Path, series_name: str) -> Tuple[models.Series
         "annot_parse_error": 0,
     }
     for edf_path in input_dir_series.iterdir():
-        is_multi_edf: bool = False
 
         edf_list: List[Path] = list(edf_path.glob("*.edf"))
 
@@ -279,10 +279,6 @@ def read_series(input_dir_series: Path, series_name: str) -> Tuple[models.Series
             logger.info(f"Skipping subject with no .edf file: {edf_path.stem}")
             error_counts["EDF_does_not_exist"] += 1
             continue
-
-        if len(edf_list) > 1:
-            logger.info(f"Multiple .edf files detected: {edf_path.stem}")
-            is_multi_edf = True
 
         logger.info(f"Start parsing subject {edf_path.name}")
 
@@ -353,29 +349,17 @@ def read_series(input_dir_series: Path, series_name: str) -> Tuple[models.Series
                     ),
                 }
 
-            if is_multi_edf:
-                subject_id: str = (
-                    f"{edf_path.stem}_V{edf_file.stem.split()[0].split("V")[-1]}"
-                )
-                metadata = models.SubjectMetadata(
-                    subject_id=subject_id,
-                    recording_start_ts=start_ts,
-                    analysis_start=analysis_start,
-                    analysis_end=analysis_end,
-                    lights_off=lights_off,
-                    lights_on=lights_on,
-                    additional_info={"recording_device": recording_type},
-                )
-            else:
-                metadata = models.SubjectMetadata(
-                    subject_id=edf_path.stem,
-                    recording_start_ts=start_ts,
-                    analysis_start=analysis_start,
-                    analysis_end=analysis_end,
-                    lights_off=lights_off,
-                    lights_on=lights_on,
-                    additional_info={"recording_device": recording_type},
-                )
+            subject_id: str = extract_subject_id_from_filename(edf_file)
+
+            metadata = models.SubjectMetadata(
+                subject_id=subject_id,
+                recording_start_ts=start_ts,
+                analysis_start=analysis_start,
+                analysis_end=analysis_end,
+                lights_off=lights_off,
+                lights_on=lights_on,
+                additional_info={"recording_device": recording_type},
+            )
 
             subjects[metadata.subject_id] = models.Subject(
                 metadata=metadata, sample_arrays=sample_arrays, annotations=annotations
