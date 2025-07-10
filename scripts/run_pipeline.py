@@ -1,10 +1,13 @@
 import os
-from pathlib import PurePosixPath
+from pathlib import PurePosixPath, Path
 
 from dotenv import load_dotenv
 
 from src.indicator_pipeline.sftp_client import SFTPClient
-from src.indicator_pipeline.slf_conversion import convert_folder_to_slf
+from src.indicator_pipeline.slf_conversion import (
+    convert_folder_to_slf,
+    upload_slf_folders_to_server,
+)
 
 load_dotenv()
 
@@ -26,6 +29,15 @@ def main():
     )
 
     convert_folder_to_slf(year_dir, sftp)
+
+    repo_root = Path(__file__).resolve().parent
+    while ".git" not in [p.name for p in repo_root.iterdir()]:
+        repo_root = repo_root.parent
+
+    outside_repo_dir = repo_root.parent
+    local_output_root = outside_repo_dir / "slf-output"
+
+    upload_slf_folders_to_server(local_output_root, year_dir, sftp_client=sftp)
 
     sftp.close()
 
