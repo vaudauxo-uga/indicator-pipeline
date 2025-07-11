@@ -1,0 +1,28 @@
+[project]
+name = "indicator-pipeline"
+version = "0.1.0"
+description = "Pipeline de conversion de fichiers EDF en SLF et upload via SFTP"
+authors = [
+    { name = "Olivia Vaudaux", email = "olivia.vaudaux@univ-grenoble-alpes.fr" }
+]
+readme = "README.md"
+requires-python = ">=3.9"
+
+dependencies = [
+    "paramiko",
+    "python-dotenv",
+    "pyEDFlib",
+    "numpy",
+    "pandas",
+    "mne",
+    "tqdm",
+    "striprtf",
+    "sleeplab-format @ git+https://github.com/UEF-SmartSleepLab/sleeplab-format.git@4d5bf190b662725e191f2c154b782d96692ea2d2"
+]
+
+[project.scripts]
+run-pipeline = "indicator_pipeline.run_pipeline:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
