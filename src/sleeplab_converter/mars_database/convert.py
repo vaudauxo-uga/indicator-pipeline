@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, List, Tuple
 import numpy as np
 from sleeplab_format import writer, models
 
-from scripts.utils import extract_subject_id_from_filename
+from indicator_pipeline.utils import extract_subject_id_from_filename
 from sleeplab_converter import edf
 from sleeplab_converter.events_mapping import STAGE_MAPPING, AASM_EVENT_MAPPING
 from sleeplab_converter.mars_database import annotation
