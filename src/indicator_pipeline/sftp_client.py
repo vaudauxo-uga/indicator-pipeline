@@ -25,7 +25,7 @@ class SFTPClient:
         self.sftp = None
 
     def connect(self):
-        logger.info(f"Connexion au serveur SFTP {self.host}:{self.port}")
+        logger.info(f"Connecting to SFTP server {self.host}:{self.port}")
         if self.key_path:
             private_key = paramiko.RSAKey.from_private_key_file(
                 self.key_path, password=self.password
@@ -36,7 +36,7 @@ class SFTPClient:
             self.transport = paramiko.Transport((self.host, self.port))
             self.transport.connect(username=self.user, password=self.password)
         self.sftp = paramiko.SFTPClient.from_transport(self.transport)
-        logger.info("Connexion réussie")
+        logger.info("Connection successful")
 
     def list_files(self, path="."):
         return self.sftp.listdir(path)
@@ -82,4 +82,4 @@ class SFTPClient:
             self.sftp.close()
         if self.transport:
             self.transport.close()
-        logger.info("Connexion SFTP fermée")
+        logger.info("SFTP connection closed")
