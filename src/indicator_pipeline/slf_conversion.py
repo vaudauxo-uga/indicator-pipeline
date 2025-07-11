@@ -3,8 +3,8 @@ import tempfile
 from pathlib import Path, PurePosixPath
 from typing import List
 
+from indicator_pipeline.sftp_client import SFTPClient
 from sleeplab_converter.mars_database.convert import convert_dataset
-from src.indicator_pipeline.sftp_client import SFTPClient
 
 logger = logging.getLogger(__name__)
 
