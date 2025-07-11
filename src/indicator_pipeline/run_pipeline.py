@@ -4,6 +4,7 @@ from pathlib import PurePosixPath, Path
 
 from dotenv import load_dotenv
 
+from indicator_pipeline.logging_config import setup_logging
 from indicator_pipeline.sftp_client import SFTPClient
 from indicator_pipeline.slf_conversion import (
     convert_folder_to_slf,
@@ -31,6 +32,7 @@ def parse_args():
 def main():
 
     args = parse_args()
+    setup_logging(args.years)
 
     host: str = os.getenv("SFTP_HOST")
     username: str = os.getenv("SFTP_USER")
