@@ -1,7 +1,6 @@
+import re
 from pathlib import Path
 from typing import Optional
-
-import re
 
 
 def extract_subject_id_from_filename(edf_file: Path) -> Optional[str]:
@@ -18,6 +17,7 @@ def extract_subject_id_from_filename(edf_file: Path) -> Optional[str]:
 
     return f"{patient_id}_{visit_suffix}" if visit_suffix else patient_id
 
+
 def get_repo_root() -> Path:
     """Get the root of the repository."""
 
@@ -25,6 +25,7 @@ def get_repo_root() -> Path:
     while ".git" not in [p.name for p in repo_root.iterdir()]:
         repo_root = repo_root.parent
     return repo_root
+
 
 def get_local_slf_output() -> Path:
     """Get the root of the local output directory."""
