@@ -1,7 +1,7 @@
 [project]
 name = "indicator-pipeline"
 version = "0.1.0"
-description = "Pipeline de conversion de fichiers EDF en SLF et upload via SFTP"
+description = "Automated pipeline for converting EDF files to SLF format and transferring them via SFTP"
 authors = [
     { name = "Olivia Vaudaux", email = "olivia.vaudaux@univ-grenoble-alpes.fr" }
 ]
