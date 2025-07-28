@@ -3,17 +3,22 @@ from pathlib import Path
 from typing import Optional
 
 
+def parse_patient_and_visit(filename: str) -> tuple[str, str]:
+    """Extracts patient id and visit number from filename"""
+
+    match = re.match(r"PA(\d+)_V(\d+)", filename)
+    if match:
+        patient_id = match.group(1)
+        numero_visite = match.group(2)
+        return patient_id, numero_visite
+    return "", ""
+
+
 def extract_subject_id_from_filename(edf_file: Path) -> Optional[str]:
     """Extracts a standardized subject ID from an EDF filename."""
 
     stem: str = edf_file.stem
-
-    match = re.search(r"(PA\d+)(V\d+C\d+)?", stem)
-    if not match:
-        return None
-
-    patient_id: str = match.group(1)
-    visit_suffix: str = match.group(2)
+    patient_id, visit_suffix = parse_patient_and_visit(stem)
 
     return f"{patient_id}_{visit_suffix}" if visit_suffix else patient_id
 
