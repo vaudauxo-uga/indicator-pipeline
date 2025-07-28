@@ -14,6 +14,7 @@ dependencies = [
     "pyEDFlib",
     "numpy",
     "pandas",
+    "openpyxl",
     "mne",
     "tqdm",
     "striprtf",
