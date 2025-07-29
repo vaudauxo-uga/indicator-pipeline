@@ -74,7 +74,7 @@ def df_to_json_payloads(df: pd.DataFrame) -> List[Dict[str, Any]]:
         filename = str(row.get("Filename", "")).strip()
         patient_id, numero_visite = parse_patient_and_visit(filename)
 
-        if not patient_id or not numero_visite:
+        if not patient_id and not numero_visite:
             logger.warning(f"⛔️ Skipped invalid filename: {filename}")
             continue
 
