@@ -4,6 +4,7 @@ from pathlib import Path, PurePosixPath
 from typing import List
 
 from indicator_pipeline.sftp_client import SFTPClient
+from indicator_pipeline.utils import parse_patient_and_visit
 from sleeplab_converter.mars_database.convert import convert_dataset
 
 logger = logging.getLogger(__name__)
@@ -68,11 +69,7 @@ def upload_slf_folders_to_server(
 ):
     """
     Uploads all SLF folders from a local output directory to the corresponding year directory on the remote server.
-
-    Args:
-        local_slf_output (Path): Path to the local 'slf-output' directory.
-        remote_year_dir (PurePosixPath): Remote directory for the target year (e.g., /.../C1/2025).
-        sftp_client (SFTPClient): Active SFTP client.
+    Skips uploads if the patient folder name does not match the .edf filename(s) found on the remote server.
     """
 
     local_year_dir: Path = local_slf_output / "slf_to_compute" / remote_year_dir.name
@@ -84,9 +81,32 @@ def upload_slf_folders_to_server(
         if not patient_folder.is_dir():
             continue
 
-        patient_id: str = patient_folder.name.split("_")[0]
-        slf_remote_name = f"slf_{patient_folder.name}"
+        folder_patient_id: str = patient_folder.name.split("_")[0]
+        slf_remote_name: str = f"slf_{patient_folder.name}"
+        remote_patient_dir: PurePosixPath = remote_year_dir / folder_patient_id / slf_remote_name
 
-        remote_patient_dir = remote_year_dir / patient_id / slf_remote_name
+        remote_raw_dir: PurePosixPath = remote_year_dir / folder_patient_id
+        try:
+            remote_files: List[str] = sftp_client.list_files(str(remote_raw_dir))
+        except Exception as e:
+            logger.warning(f"[SKIP] Unable to list remote files for {remote_raw_dir}: {e}")
+            continue
+
+        edf_files: List[str] = [f for f in remote_files if f.lower().endswith(".edf")]
+
+        inconsistent: bool = False
+        for edf in edf_files:
+            expected_patient_id, _ = parse_patient_and_visit(edf)
+            if expected_patient_id and expected_patient_id != folder_patient_id.replace("PA", ""):
+                logger.warning(
+                    f"[SKIP] Inconsistent patient ID: folder = {folder_patient_id}, "
+                    f"EDF = {edf} (expected = {expected_patient_id})"
+                )
+                inconsistent = True
+                break
+
+        if inconsistent:
+            continue
+
         logger.info(f"[UPLOAD] Uploading {patient_folder} to {remote_patient_dir}")
         sftp_client.upload_folder_recursive(patient_folder, str(remote_patient_dir))
