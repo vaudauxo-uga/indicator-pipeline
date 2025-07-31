@@ -5,8 +5,10 @@ from typing import List
 
 
 def setup_logging(years: List[str]) -> None:
-    """Configure logging files, one general and one for warnings and errors."""
-
+    """
+    Sets up logging for the pipeline with one main and one warning/error log file.
+    The logs are stored in the "logs" directory and include the specified years and a timestamp.
+    """
     Path("logs").mkdir(exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
