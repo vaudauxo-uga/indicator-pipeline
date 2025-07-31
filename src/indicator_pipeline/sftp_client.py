@@ -89,8 +89,6 @@ class SFTPClient:
         """
         Recursively uploads a local directory and its content to the SFTP server.
         """
-        local_path: Path = local_path
-
         try:
             self.sftp.stat(remote_path)
         except FileNotFoundError:
