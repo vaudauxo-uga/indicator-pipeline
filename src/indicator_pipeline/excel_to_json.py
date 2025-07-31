@@ -12,7 +12,9 @@ PROCESSED_PATH: Path = get_repo_root() / "logs" / "processed.json"
 
 
 def load_processed() -> Set[str]:
-    """Loads json file with all ParameterValues files already processed."""
+    """
+    Loads json file with all ParameterValues files already processed.
+    """
     if PROCESSED_PATH.exists():
         with open(PROCESSED_PATH, "r") as f:
             return set(json.load(f))
@@ -20,13 +22,17 @@ def load_processed() -> Set[str]:
 
 
 def save_processed(processed_set) -> None:
-    """Saves json file with all ParameterValues files already processed."""
+    """
+    Saves json file with all ParameterValues files already processed.
+    """
     with open(PROCESSED_PATH, "w") as f:
         json.dump(sorted(processed_set), f, indent=2)
 
 
 def find_parameter_folders(abosa_output_path: Path) -> List[Path]:
-    """Based on the abosa output path, makes the list of all ParameterValues folders."""
+    """
+    Based on the abosa output path, makes the list of all ParameterValues folders.
+    """
 
     parameter_dirs: List[Path] = []
 
@@ -40,8 +46,9 @@ def find_parameter_folders(abosa_output_path: Path) -> List[Path]:
 
 
 def get_excel_from_rel_path(folder_path: Path, rel_path: str) -> pd.DataFrame:
-    """Loads the Excel file from folder path in a dataframe."""
-
+    """
+    Loads the Excel file from folder path in a dataframe.
+    """
     xlsx_files: List[Path] = list(folder_path.glob("*.xlsx"))
 
     if not xlsx_files:
@@ -54,7 +61,9 @@ def get_excel_from_rel_path(folder_path: Path, rel_path: str) -> pd.DataFrame:
 
 
 def df_to_json_payloads(df: pd.DataFrame) -> List[Dict[str, Any]]:
-    """Convert each row of an Excel DataFrame into a compliant JSON payload."""
+    """
+    Convert each row of an Excel DataFrame into a compliant JSON payload.
+    """
 
     def extract(patient_row, keys: List[str]) -> Dict[str, Any]:
         return {key: try_parse_number(patient_row.get(key)) for key in keys}
@@ -177,15 +186,15 @@ def df_to_json_payloads(df: pd.DataFrame) -> List[Dict[str, Any]]:
                 ],
             ),
         }
-
         payloads.append(payload)
 
     return payloads
 
 
-def excel_to_json():
-    """Processes abosa output Excel files and stores the data in a JSON file."""
-
+def excel_to_json() -> None:
+    """
+    Processes abosa output Excel files and stores the data in JSON payloads.
+    """
     repo_root: Path = get_repo_root()
     outside_repo_dir: Path = repo_root.parent
     abosa_output: Path = outside_repo_dir / "abosa-output"
@@ -193,7 +202,7 @@ def excel_to_json():
     processed: Set[str] = load_processed()
     new_processed: Set[str] = set(processed)
 
-    param_dirs = find_parameter_folders(abosa_output)
+    param_dirs: List[Path] = find_parameter_folders(abosa_output)
 
     for folder in param_dirs:
         rel_path: str = str(folder.relative_to(abosa_output))
@@ -203,10 +212,10 @@ def excel_to_json():
             continue
 
         logger.info(f"🚀 Processing : {rel_path}")
-        indicator_df = get_excel_from_rel_path(folder, rel_path)
+        indicator_df: pd.DataFrame = get_excel_from_rel_path(folder, rel_path)
         payloads: List[Dict[str, Any]] = df_to_json_payloads(indicator_df)
 
-        output_dir = repo_root / "logs" / "json_dumps"
+        output_dir: Path = repo_root / "logs" / "json_dumps"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         safe_filename = rel_path.replace("/", "__").replace("\\", "__") + ".json"
