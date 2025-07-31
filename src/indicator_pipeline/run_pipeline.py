@@ -6,10 +6,7 @@ from dotenv import load_dotenv
 
 from indicator_pipeline.logging_config import setup_logging
 from indicator_pipeline.sftp_client import SFTPClient
-from indicator_pipeline.slf_conversion import (
-    convert_folder_to_slf,
-    upload_slf_folders_to_server,
-)
+from indicator_pipeline.slf_conversion import SLFConversion
 from indicator_pipeline.utils import get_local_slf_output
 
 
@@ -50,10 +47,11 @@ def main():
         )
         local_slf_output: Path = get_local_slf_output()
 
-        convert_folder_to_slf(local_slf_output, server_year_dir, sftp)
-        upload_slf_folders_to_server(
-            local_slf_output, server_year_dir, sftp_client=sftp
+        slf_converter: SLFConversion = SLFConversion(
+            local_slf_output, server_year_dir, sftp
         )
+        slf_converter.convert_folder_to_slf()
+        slf_converter.upload_slf_folders_to_server()
 
     sftp.close()
 
