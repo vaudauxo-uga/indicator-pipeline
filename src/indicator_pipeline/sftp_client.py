@@ -57,12 +57,6 @@ class SFTPClient:
         """
         return self.sftp.listdir(path)
 
-    def download_file(self, remote_path, local_path):
-        """
-        Downloads a file from the remote server to the local filesystem.
-        """
-        self.sftp.get(remote_path, local_path)
-
     def is_dir(self, path) -> bool:
         """
         Checks if the given remote path is a directory.
