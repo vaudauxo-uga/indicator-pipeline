@@ -57,7 +57,7 @@ class SFTPClient:
         """
         return self.sftp.listdir(path)
 
-    def is_dir(self, path) -> bool:
+    def is_dir(self, path: str) -> bool:
         """
         Checks if the given remote path is a directory.
         """
