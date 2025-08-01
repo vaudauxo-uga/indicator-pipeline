@@ -9,7 +9,7 @@ import numpy as np
 from sleeplab_format import writer, models
 
 from indicator_pipeline.utils import extract_subject_id_from_filename
-from sleeplab_converter import edf
+from sleeplab_converter.edf import read_edf_export, read_edf_export_mne
 from sleeplab_converter.events_mapping import STAGE_MAPPING, AASM_EVENT_MAPPING
 from sleeplab_converter.mars_database import annotation
 
@@ -249,11 +249,11 @@ def parse_edf(_edf_path: Path) -> tuple[datetime, Dict, Dict[str, Any]]:
     """Loads an EDF file and returns the start time, signal data, and header."""
 
     try:
-        sig_load_funcs, sig_headers, header = edf.read_edf_export(
+        sig_load_funcs, sig_headers, header = read_edf_export(
             _edf_path, annotations=False
         )
     except:
-        sig_load_funcs, sig_headers, header = edf.read_edf_export_mne(
+        sig_load_funcs, sig_headers, header = read_edf_export_mne(
             str(_edf_path), annotations=False
         )
 

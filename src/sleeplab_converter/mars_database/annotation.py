@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from striprtf.striprtf import rtf_to_text
 
-from sleeplab_converter import edf
+from sleeplab_converter.edf import read_edf_export
 
 # These functions are for reading the various annotation files of mars database
 # and build for compatibility with the sleeplab format converter
@@ -449,7 +449,7 @@ def annotation_csv(path: Path, patient: str, edf_name: str):
     # Parse sleep stages from edf+ header
     edf_path: Path = path / patient / f"{edf_name.strip()}.edf"
     try:
-        header = edf.read_edf_export(edf_path, annotations=True)[-1]
+        header = read_edf_export(edf_path, annotations=True)[-1]
         st_rec: datetime = header["startdate"]
         keys: List[str] = [
             "Validated",
