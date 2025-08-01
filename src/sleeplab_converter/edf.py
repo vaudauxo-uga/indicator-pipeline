@@ -1,14 +1,19 @@
 from functools import partial
 from pathlib import Path
-from typing import Any, Optional, Dict, List
+from typing import Any, Optional, Dict, List, Tuple
 
 import numpy as np
 import pyedflib
 from mne.io import read_raw_edf
 
 
-def read_header_flexible(edf_filepath):
-    header = {}
+def read_header_flexible(edf_filepath) -> Dict[str, Any]:
+    """
+    Reads the EDF header manually by parsing the binary file.
+    Returns a dictionary containing parsed header fields including channel labels, sampling rates, etc.
+    """
+    header: Dict[str, Any] = {}
+
     with open(edf_filepath, mode="rb", buffering=0) as f:
         header["ver"] = int(f.read(8).decode("latin-1"))
         header["patientID"] = f.read(80).decode("latin-1")
@@ -23,8 +28,6 @@ def read_header_flexible(edf_filepath):
         header["label"] = [
             f.read(16).decode("latin-1").strip() for _ in range(header["ns"])
         ]
-        # header['labels'] = [re.sub('\W', '', label) for label in header['labels']]
-
         header["transducer"] = [
             f.read(80).decode("latin-1") for _ in range(header["ns"])
         ]
@@ -56,6 +59,10 @@ def read_header_flexible(edf_filepath):
 def read_signal_from_path(
     edf_path: str, idx: int, digital: bool = False, dtype: np.dtype = np.float32
 ) -> np.array:
+    """
+    Reads a specific signal channel from an EDF file using pyedflib.
+    Returns the signal values as a NumPy array.
+    """
     with pyedflib.EdfReader(edf_path, annotations_mode=0) as hdl:
         # Read as digital if need to rewrite EDF
         # since otherwise will crash due to shifted values
@@ -68,12 +75,17 @@ def read_signal_from_path(
 def read_edf_export(
     edf_path: Path,
     digital: bool = False,
-    ch_names: Optional[list[str]] = None,
+    ch_names: Optional[List[str]] = None,
     annotations: bool = False,
     dtype: np.dtype = np.float32,
-) -> tuple[list[np.array], list[dict[str, Any]], dict[str, Any]]:
-    """Reads an EDF file and returns lazy signal loaders, signal headers, and metadata."""
-
+) -> Tuple[List[np.array], List[Dict[str, Any]], Dict[str, Any]]:
+    """
+    Reads an EDF file using pyedflib.
+    Returns:
+        - list of lazy signal loader functions,
+        - list of signal headers,
+        - global EDF header with optional annotations (metadata)
+    """
     edf_path_str: str = str(edf_path.resolve())
 
     # Tell EdfReader not to validate annotations if they will not be used
@@ -98,7 +110,6 @@ def read_edf_export(
 
         header: Dict[str, Any] = hdl.getHeader()
 
-        # add annotations to header
         if annotations:
             annotations = hdl.readAnnotations()
             annotations = [[s, d, a] for s, d, a in zip(*annotations)]
@@ -125,12 +136,13 @@ def read_edf_export(
     return s_load_funcs, signal_headers, header
 
 
-## Reading using MNE library
-
-
 def read_signal_from_path_mne(
     edf_path: str, ch_name: str, dtype: np.dtype = np.float32
 ) -> np.array:
+    """
+    Reads a single channel from an EDF file using the MNE library.
+    Returns the signal values as a NumPy array.
+    """
     signal_raw = read_raw_edf(edf_path, include=ch_name, preload=True, verbose="error")
     s = signal_raw.get_data()
     return np.array(s[0]).astype(dtype)
@@ -138,16 +150,17 @@ def read_signal_from_path_mne(
 
 def read_edf_export_mne(
     edf_path: str,
-    ch_names: Optional[list[str]] = None,
+    ch_names: Optional[List[str]] = None,
     annotations: bool = False,
     dtype: np.dtype = np.float32,
-) -> tuple[list[np.array], list[dict[str, Any]], dict[str, Any]]:
-    """Read the EDF file and return signals and headers separately.
-
-    Instead of the actual signal, return a function which reads the signal
-    when evaluated. This way, all data need not fit into memory.
+) -> Tuple[List[np.array], List[Dict[str, Any]], Dict[str, Any]]:
     """
-
+    Read the EDF file using the MNE library.
+    Returns:
+        - list of lazy signal loader functions,
+        - list of signal headers,
+        - global EDF header with optional annotations (metadata)
+    """
     header = read_header_flexible(edf_path)
     n_chs = header["ns"]
 
