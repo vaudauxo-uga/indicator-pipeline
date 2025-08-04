@@ -46,6 +46,9 @@ class SLFConversion:
             local_year_dir.mkdir(parents=True, exist_ok=True)
 
             patients = self.sftp_client.list_files(str(self.remote_year_dir))
+            logger.info(f"Found {len(patients)} patient folders: {patients}")
+
+            downloaded_count: int = 0
             for patient_id in patients:
                 remote_patient_path: PurePosixPath = self.remote_year_dir / patient_id
                 existing_folders = self.sftp_client.list_files(str(remote_patient_path))
@@ -66,6 +69,11 @@ class SLFConversion:
                 logger.info(
                     f"[COPY] Copied patient {patient_id} locally to {local_patient_dir}"
                 )
+                downloaded_count += 1
+
+            logger.info(
+                f"[SUMMARY] Downloaded {downloaded_count} patient(s). Starting conversion..."
+            )
 
             convert_dataset(
                 input_dir=tmp_root_path,
