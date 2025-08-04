@@ -1,3 +1,4 @@
+import os
 import re
 from pathlib import Path
 from typing import Optional
@@ -32,9 +33,16 @@ def get_repo_root() -> Path:
     Get the root of the repository. Returns the corresponding Path.
     """
     repo_root: Path = Path(__file__).resolve().parent
-    while ".git" not in [p.name for p in repo_root.iterdir()]:
+    max_levels = 10
+
+    for _ in range(max_levels):
+        if repo_root.name == "indicator-pipeline":
+            return repo_root
+        if repo_root.parent == repo_root:
+            break
         repo_root = repo_root.parent
-    return repo_root
+
+    return Path(__file__).resolve().parent
 
 
 def get_local_slf_output() -> Path:
@@ -42,8 +50,13 @@ def get_local_slf_output() -> Path:
     Get the root of the local slf output directory.
     Returns the corresponding Path.
     """
-    repo_root: Path = get_repo_root()
-    outside_repo_dir: Path = repo_root.parent
-    local_slf_output: Path = outside_repo_dir / "slf-output"
+    custom_path = os.environ.get("SLF_OUTPUT_PATH")
+    if custom_path:
+        local_slf_output = Path(custom_path)
+    else:
+        repo_root: Path = get_repo_root()
+        outside_repo_dir: Path = repo_root.parent
+        local_slf_output = outside_repo_dir / "slf-output"
+
     local_slf_output.mkdir(parents=True, exist_ok=True)
     return local_slf_output
