@@ -1,7 +1,6 @@
 import os
 import re
 from pathlib import Path
-from typing import Optional
 
 
 def parse_patient_and_visit(filename: str) -> tuple[str, str]:
