@@ -1,6 +1,6 @@
 from functools import partial
 from pathlib import Path
-from typing import Any, Optional, Dict, List, Tuple
+from typing import Any, Optional, Dict, List, Tuple, Callable
 
 import numpy as np
 import pyedflib
@@ -78,7 +78,7 @@ def read_edf_export(
     ch_names: Optional[List[str]] = None,
     annotations: bool = False,
     dtype: np.dtype = np.float32,
-) -> Tuple[List[np.array], List[Dict[str, Any]], Dict[str, Any]]:
+) -> Tuple[List[Callable[[], np.array]], List[Dict[str, Any]], Dict[str, Any]]:
     """
     Reads an EDF file using pyedflib.
     Returns:
@@ -89,10 +89,7 @@ def read_edf_export(
     edf_path_str: str = str(edf_path.resolve())
 
     # Tell EdfReader not to validate annotations if they will not be used
-    if annotations is False:
-        annotations_mode = 0
-    else:
-        annotations_mode = 2
+    annotations_mode: int = 2 if annotations else 0
 
     with pyedflib.EdfReader(edf_path_str, annotations_mode=annotations_mode) as hdl:
         n_chs: int = hdl.signals_in_file
@@ -153,7 +150,7 @@ def read_edf_export_mne(
     ch_names: Optional[List[str]] = None,
     annotations: bool = False,
     dtype: np.dtype = np.float32,
-) -> Tuple[List[np.array], List[Dict[str, Any]], Dict[str, Any]]:
+) -> Tuple[List[Callable[[], np.array]], List[Dict[str, Any]], Dict[str, Any]]:
     """
     Read the EDF file using the MNE library.
     Returns:

@@ -3,10 +3,12 @@ import logging
 from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple, Optional
 
 import numpy as np
+import pandas as pd
 from sleeplab_format import writer, models
+from sleeplab_format.models import SampleArray
 
 from indicator_pipeline.utils import extract_subject_id_from_filename
 from sleeplab_converter.edf import read_edf_export, read_edf_export_mne
@@ -16,12 +18,21 @@ from sleeplab_converter.mars_database import annotation
 logger = logging.getLogger(__name__)
 
 
-def parse_samplearrays(s_load_funcs, sig_headers, header):
-    """Read the start_ts and SampleArrays from the EDF."""
+def parse_sample_arrays(
+    s_load_funcs: List[Callable[[], np.array]],
+    sig_headers: List[Dict[str, Any]],
+    header: Dict[str, Any],
+) -> Tuple[datetime, Dict[str, SampleArray]]:
+    """
+    Parses signal data and metadata from EDF into sleeplab-format SampleArrays.
+    Returns:
+        - the recording start timestamp,
+        - a dictionary of SampleArrays (one for each signal).
+    """
 
-    def _parse_samplearray(
+    def _parse_sample_array(
         _load_func: Callable[[], np.array], _header: dict[str, Any]
-    ) -> models.SampleArray:
+    ) -> SampleArray:
         array_attributes = models.ArrayAttributes(
             # Replace '/' with '_' to avoid errors in filepaths
             name=_header["label"].replace("/", "_").replace("?", "").replace(".", ""),
@@ -42,13 +53,15 @@ def parse_samplearrays(s_load_funcs, sig_headers, header):
 
     sample_arrays: Dict = {}
     for s_load_func, s_header in zip(s_load_funcs, sig_headers):
-        sample_array = _parse_samplearray(s_load_func, s_header)
+        sample_array = _parse_sample_array(s_load_func, s_header)
         sample_arrays[sample_array.attributes.name] = sample_array
 
     return start_ts, sample_arrays
 
 
-def parse_sleep_stage(row) -> models.Annotation[models.AASMSleepStage]:
+def parse_sleep_stage(
+    row: pd.Series,
+) -> Optional[models.Annotation[models.AASMSleepStage]]:
     """
     Parse a DataFrame row to create an Annotation object for recognized sleep stages.
     Returns an Annotation if the 'Event_label' matches a known stage; otherwise, returns None.
@@ -65,14 +78,15 @@ def parse_sleep_stage(row) -> models.Annotation[models.AASMSleepStage]:
         return None
 
 
-def parse_for_aasm_annotation(row) -> models.Annotation[models.AASMEvent]:
+def parse_for_aasm_annotation(
+    row: pd.Series,
+) -> Optional[models.Annotation[models.AASMEvent]]:
     """
     Parse a DataFrame row to create an Annotation for AASM events.
-    Returns an Annotation if 'Event_label' matches and, if present, 'Validated' is "Yes".
+    Returns an Annotation if 'Event_label' matches and, if present, 'Validated' is 'Yes'.
     Otherwise, returns None.
     """
     # ToDo: Check unique names from all data!! There can be events missing
-
     if row["Event_label"] in AASM_EVENT_MAPPING.keys():
         if "Validated" in row.keys():
             if row["Validated"] == "Yes":
@@ -95,16 +109,29 @@ def parse_for_aasm_annotation(row) -> models.Annotation[models.AASMEvent]:
         return None
 
 
-def parse_annotations(header: Dict[str, Any], edf_path: Path, edf_name: str) -> tuple[
-    List[models.Annotation[str]],  # Events
-    List[models.Annotation[models.AASMSleepStage]],  # Hypnogram
-    List[models.Annotation[models.AASMEvent]],  # Other annotations
-    datetime | None,  # Analysis start
-    datetime | None,  # Analysis end
-    datetime | None,  # Lights off
-    datetime | None,  # Lights on
-    str | None,
+def parse_annotations(header: Dict[str, Any], edf_path: Path, edf_name: str) -> Tuple[
+    List[models.Annotation[str]],
+    List[models.Annotation[models.AASMSleepStage]],
+    List[models.Annotation[models.AASMEvent]],
+    Optional[datetime],
+    Optional[datetime],
+    Optional[datetime],
+    Optional[datetime],
+    Optional[str],
 ]:
+    """
+    Parses and categorizes annotations (sleep stages, AASM events, lights on/off, etc.)
+    from corresponding annotation files for a given EDF recording.
+    Returns:
+        - list of all original events,
+        - list of hypnogram stages,
+        - list of valid AASM events,
+        - analysis start timestamp,
+        - analysis end timestamp,
+        - lights off timestamp,
+        - lights on timestamp,
+        - recording device type.
+    """
 
     events: List[models.Annotation[str]] = []
     aasm_sleep_stages: List[models.Annotation[models.AASMSleepStage]] = []
@@ -245,9 +272,11 @@ def convert_dataset(
     )
 
 
-def parse_edf(_edf_path: Path) -> tuple[datetime, Dict, Dict[str, Any]]:
-    """Loads an EDF file and returns the start time, signal data, and header."""
-
+def parse_edf(_edf_path: Path) -> Tuple[datetime, Dict, Dict[str, Any]]:
+    """
+    Parses EDF signals using pyEDFlib or MNE depending on compatibility.
+    Returns the start time, signal data, and header.
+    """
     try:
         sig_load_funcs, sig_headers, header = read_edf_export(
             _edf_path, annotations=False
@@ -256,23 +285,28 @@ def parse_edf(_edf_path: Path) -> tuple[datetime, Dict, Dict[str, Any]]:
         sig_load_funcs, sig_headers, header = read_edf_export_mne(
             str(_edf_path), annotations=False
         )
-
-    start_ts, sample_arrays = parse_samplearrays(sig_load_funcs, sig_headers, header)
+    start_ts, sample_arrays = parse_sample_arrays(sig_load_funcs, sig_headers, header)
 
     return start_ts, sample_arrays, header
 
 
-def read_series(input_dir_series: Path, series_name: str) -> Tuple[models.Series, Dict]:
-    """Read data from `edf file` + `annotation file` and parse to sleeplab Series."""
-
+def read_series(
+    input_dir_series: Path, series_name: str
+) -> Tuple[models.Series, Dict[str, int]]:
+    """
+    Reads and parses all subjects from a given series folder containing EDF and annotation files.
+    For each subject, loads EDF signals, parses annotations, and builds Subject objects
+    compatible with sleeplab format.
+    Returns the parsed sleeplab Series object and counts of errors encountered during parsing.
+    """
     subjects: Dict = {}
     error_counts: Dict[str, int] = {
         "EDF_does_not_exist": 0,
         "edf_reader_not_working": 0,
         "annot_parse_error": 0,
     }
-    for edf_path in input_dir_series.iterdir():
 
+    for edf_path in input_dir_series.iterdir():
         edf_list: List[Path] = list(edf_path.glob("*.edf"))
 
         if not edf_list:
