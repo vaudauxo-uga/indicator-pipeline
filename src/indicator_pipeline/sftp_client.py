@@ -1,5 +1,6 @@
 import stat
 from pathlib import Path
+from typing import List
 
 import paramiko
 import logging
@@ -8,6 +9,13 @@ logger = logging.getLogger(__name__)
 
 
 class SFTPClient:
+    """
+    A simplified wrapper around Paramiko's SFTP client for interacting with remote SFTP servers.
+
+    This class supports both password-based and key-based authentication, and provides methods
+    for connecting, listing files, downloading and uploading individual files or entire folders
+    recursively, and closing the connection.
+    """
     def __init__(
         self,
         host: str,
@@ -25,6 +33,11 @@ class SFTPClient:
         self.sftp = None
 
     def connect(self):
+        """
+        Establishes a connection to the remote SFTP server.
+        Uses SSH key authentication if `key_path` is provided; otherwise, falls back to password authentication.
+        Initializes the internal SFTP client.
+        """
         logger.info(f"Connecting to SFTP server {self.host}:{self.port}")
         if self.key_path:
             private_key = paramiko.RSAKey.from_private_key_file(
@@ -38,19 +51,25 @@ class SFTPClient:
         self.sftp = paramiko.SFTPClient.from_transport(self.transport)
         logger.info("Connection successful")
 
-    def list_files(self, path="."):
+    def list_files(self, path=".") -> List[str]:
+        """
+        Lists files names and directories at the specified remote path.
+        """
         return self.sftp.listdir(path)
 
-    def download_file(self, remote_path, local_path):
-        self.sftp.get(remote_path, local_path)
-
-    def is_dir(self, path) -> bool:
+    def is_dir(self, path: str) -> bool:
+        """
+        Checks if the given remote path is a directory.
+        """
         try:
             return stat.S_ISDIR(self.sftp.stat(path).st_mode)
         except IOError:
             return False
 
     def download_folder_recursive(self, remote_path: str, local_path: Path):
+        """
+        Recursively downloads a remote folder and its contents to a local directory.
+        """
         local_path.mkdir(parents=True, exist_ok=True)
         for item in self.sftp.listdir(remote_path):
             remote_item: str = remote_path + "/" + item
@@ -61,10 +80,9 @@ class SFTPClient:
                 self.sftp.get(remote_item, str(local_item))
 
     def upload_folder_recursive(self, local_path: Path, remote_path: str):
-        """Uploads a local directory to the SFTP server recursively."""
-
-        local_path = Path(local_path)
-
+        """
+        Recursively uploads a local directory and its content to the SFTP server.
+        """
         try:
             self.sftp.stat(remote_path)
         except FileNotFoundError:
@@ -78,6 +96,9 @@ class SFTPClient:
                 self.sftp.put(str(item), remote_item)
 
     def close(self):
+        """
+        Closes the SFTP connection and associated resources.
+        """
         if self.sftp:
             self.sftp.close()
         if self.transport:

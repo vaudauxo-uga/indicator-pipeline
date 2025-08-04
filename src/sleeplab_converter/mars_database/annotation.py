@@ -1,19 +1,14 @@
-### Importation des données d'annotation relatives aux signaux de PSG
-
 import re
 from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Tuple, Optional
 
 import numpy as np
 import pandas as pd
 from striprtf.striprtf import rtf_to_text
 
-from sleeplab_converter import edf
-
-# These functions are for reading the various annotation files of mars database
-# and build for compatibility with the sleeplab format converter
+from sleeplab_converter.edf import read_edf_export
 
 # Here I have fixed many inconsistency in sleep staging, but the timestamps still correspond to real time and cannot be used to map annotations to discontinous signals
 
@@ -155,10 +150,11 @@ def time_from_start_to_seconds(rtf_df: pd.DataFrame) -> pd.DataFrame:
     return rtf_df
 
 
-## Import DELTAMED annotations
-
-
-def annotation_deltamed(path: Path, patient: str, edf_name: str):
+def annotation_deltamed(path: Path, patient: str, edf_name: str) -> pd.DataFrame:
+    """
+    Loads and parses Deltamed annotations from both .txt and .rtf files.
+    Returns the combined annotations with unified time, duration, and label format.
+    """
     txt_path: Path = path / patient / f"{edf_name.strip()}.txt"
     txt_events_df: pd.DataFrame = pd.read_table(
         txt_path,
@@ -308,7 +304,12 @@ def annotation_deltamed(path: Path, patient: str, edf_name: str):
     return events_df
 
 
-def annotation_remlogic(txt_path: Path):
+def annotation_remlogic(txt_path: Path) -> pd.DataFrame:
+    """
+    Parses a RemLogic .txt annotation file with variable header structures.
+    Returns the cleaned annotations with standardized fields.
+    """
+
     sleep_stages: List[str] = [
         "SLEEP-S0",
         "SLEEP-S1",
@@ -404,8 +405,11 @@ def annotation_remlogic(txt_path: Path):
     return txt_events_df2
 
 
-def annotation_csv(path: Path, patient: str, edf_name: str):
-
+def annotation_csv(path: Path, patient: str, edf_name: str) -> pd.DataFrame:
+    """
+    Parses annotations from a .csv file (BrainRT export).
+    Return the annotations with time, duration, and label, ready for Sleeplab format.
+    """
     csv_path: Path = path / patient / f"{edf_name.strip()}.csv"
     data_csv: pd.DataFrame = pd.read_csv(csv_path, encoding="UTF-16", delimiter="\t")
 
@@ -449,7 +453,7 @@ def annotation_csv(path: Path, patient: str, edf_name: str):
     # Parse sleep stages from edf+ header
     edf_path: Path = path / patient / f"{edf_name.strip()}.edf"
     try:
-        header = edf.read_edf_export(edf_path, annotations=True)[-1]
+        header = read_edf_export(edf_path, annotations=True)[-1]
         st_rec: datetime = header["startdate"]
         keys: List[str] = [
             "Validated",
@@ -484,14 +488,17 @@ def annotation_csv(path: Path, patient: str, edf_name: str):
     return data_csv
 
 
-## DATA IMPORT
+def load_annotation(
+    path: Path, patient: str, edf_name: str
+) -> Tuple[Optional[pd.DataFrame], str]:
+    """
+    Main entry point for loading annotations for a given patient and recording.
+    - Auto-detects annotation type: Deltamed (.rtf/.txt), RemLogic (.txt), or BrainRT (.csv)
+    - Calls the appropriate parser
+    - Returns harmonized annotation data
 
-## Note: DELTAMED annotations are composed of a .TXT file and an .rtf_df file.
-## Remlogic annotations are composed of a .txt file only.
-## Some recordings only have .csv of the scoring
-
-
-def load_annotation(path: Path, patient: str, edf_name: str):
+    Returns the annotation DataFrame and a string describing the recording type.
+    """
     # Changed logic because we might have Remlogic and Deltamed export in same folder
     # - thus more safe to read only the annotations that correspond to .edf filename
     # edf filename vs. annotation filename have some extra space ' ' and erros every now and then --> try with various edf_name
