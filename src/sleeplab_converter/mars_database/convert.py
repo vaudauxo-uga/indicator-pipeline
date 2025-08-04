@@ -47,7 +47,7 @@ def parse_sample_arrays(
     if type(header["startdate"]) is datetime:
         start_ts = header["startdate"]
     else:
-        datetime_str: str = f"{header["startdate"]}-{header["starttime"]}"
+        datetime_str: str = f"{header['startdate']}-{header['starttime']}"
         datetime_format: str = "%d.%m.%y-%H.%M.%S"
         start_ts = datetime.strptime(datetime_str, datetime_format)
 
@@ -150,7 +150,7 @@ def parse_annotations(header: Dict[str, Any], edf_path: Path, edf_name: str) -> 
     if type(header["startdate"]) is datetime:
         st_rec = header["startdate"]
     else:
-        datetime_str: str = f"{header["startdate"]}-{header["starttime"]}"
+        datetime_str: str = f"{header['startdate']}-{header['starttime']}"
         datetime_format: str = "%d.%m.%y-%H.%M.%S"
         st_rec = datetime.strptime(datetime_str, datetime_format)
 
