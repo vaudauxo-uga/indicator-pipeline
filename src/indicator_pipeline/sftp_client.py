@@ -47,6 +47,7 @@ class SFTPClient:
             self.transport.connect(username=self.user, pkey=private_key)
         else:
             self.transport = paramiko.Transport((self.host, self.port))
+            self.transport.banner_timeout = 45
             self.transport.connect(username=self.user, password=self.password)
         self.sftp = paramiko.SFTPClient.from_transport(self.transport)
         logger.info("Connection successful")
