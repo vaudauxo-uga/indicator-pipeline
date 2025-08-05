@@ -110,7 +110,7 @@ def start_time_to_start_datetime_remlogic(
             )
         else:
             txt_df.loc[n, "Start_time"] = datetime.strptime(
-                f"{start_date_str}-{txt_df.iloc[n]["Start_time"].strip()}",
+                f"{start_date_str}-{txt_df.iloc[n]['Start_time'].strip()}",
                 DATETIME_FORMAT,
             ) + timedelta(days=1)
 
@@ -417,7 +417,7 @@ def annotation_csv(path: Path, patient: str, edf_name: str) -> pd.DataFrame:
     start_dt: List[datetime] = []
     for n in range(0, len(data_csv)):
         datetime_start = datetime.strptime(
-            f"{data_csv.iloc[n]["Start Date/Time: Date"]}-{data_csv.iloc[n]["Start Date/Time: Time - HH:MM:SS"]}",
+            f"{data_csv.iloc[n]['Start Date/Time: Date']}-{data_csv.iloc[n]['Start Date/Time: Time - HH:MM:SS']}",
             DATETIME_FORMAT,
         )
         start_dt.append(datetime_start)
