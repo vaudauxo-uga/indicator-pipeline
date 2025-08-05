@@ -1,10 +1,9 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import List
 
 
-def setup_logging(years: List[str]) -> None:
+def setup_logging(step: str) -> None:
     """
     Sets up logging for the pipeline with one main and one warning/error log file.
     The logs are stored in the "logs" directory and include the specified years and a timestamp.
@@ -12,9 +11,8 @@ def setup_logging(years: List[str]) -> None:
     Path("logs").mkdir(exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    years_str = "_".join(years)
-    full_log = f"logs/pipeline_{years_str}_{timestamp}.log"
-    warn_log = f"logs/warnings_and_errors_{years_str}_{timestamp}.log"
+    full_log = f"logs/pipeline_{step}_{timestamp}.log"
+    warn_log = f"logs/warnings_and_errors_{step}_{timestamp}.log"
 
     formatter = logging.Formatter(
         "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
