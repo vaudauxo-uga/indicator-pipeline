@@ -8,6 +8,9 @@ WORKDIR /app
 ENV SLF_OUTPUT_PATH=/app/slf-output
 RUN mkdir /app/slf-output
 
+ENV ABOSA_OUTPUT_PATH=/abosa-output
+RUN mkdir /abosa-output
+
 COPY pyproject.toml .
 COPY src ./src
 COPY README.md .
