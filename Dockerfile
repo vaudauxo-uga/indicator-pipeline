@@ -5,6 +5,9 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+ENV LOG_OUTPUT_PATH=/app/logs
+RUN mkdir -p /app/logs
+
 ENV SLF_OUTPUT_PATH=/app/slf-output
 RUN mkdir /app/slf-output
 
