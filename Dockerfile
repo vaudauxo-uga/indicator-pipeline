@@ -13,6 +13,7 @@ COPY src ./src
 COPY README.md .
 
 RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y build-essential python3-dev
 
 RUN pip install --upgrade pip setuptools wheel
 RUN pip install .
