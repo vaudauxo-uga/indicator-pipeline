@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from pathlib import Path
 from typing import List, Set, Dict, Any, Optional, Union
 
@@ -8,7 +9,9 @@ import pandas as pd
 from indicator_pipeline.utils import get_repo_root, parse_patient_and_visit
 
 logger = logging.getLogger(__name__)
-PROCESSED_PATH: Path = get_repo_root() / "logs" / "processed.json"
+DEFAULT_LOG_DIR = Path(os.environ.get("LOG_OUTPUT_PATH", "logs"))
+DEFAULT_LOG_DIR.mkdir(parents=True, exist_ok=True)
+PROCESSED_PATH: Path = DEFAULT_LOG_DIR / "processed.json"
 
 
 def load_processed() -> Set[str]:
@@ -195,9 +198,14 @@ def excel_to_json() -> None:
     """
     Processes abosa output Excel files and stores the data in JSON payloads.
     """
-    repo_root: Path = get_repo_root()
-    outside_repo_dir: Path = repo_root.parent
-    abosa_output: Path = outside_repo_dir / "abosa-output"
+
+    custom_path: str = os.environ.get("ABOSA_OUTPUT_PATH")
+    if custom_path:
+        abosa_output: Path = Path(custom_path)
+    else:
+        repo_root: Path = get_repo_root()
+        outside_repo_dir: Path = repo_root.parent
+        abosa_output: Path = outside_repo_dir / "abosa-output"
 
     processed: Set[str] = load_processed()
     new_processed: Set[str] = set(processed)
@@ -215,7 +223,7 @@ def excel_to_json() -> None:
         indicator_df: pd.DataFrame = get_excel_from_rel_path(folder, rel_path)
         payloads: List[Dict[str, Any]] = df_to_json_payloads(indicator_df)
 
-        output_dir: Path = repo_root / "logs" / "json_dumps"
+        output_dir: Path = DEFAULT_LOG_DIR / "json_dumps"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         safe_filename = rel_path.replace("/", "__").replace("\\", "__") + ".json"
