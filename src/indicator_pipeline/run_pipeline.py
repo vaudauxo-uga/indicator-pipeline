@@ -65,10 +65,22 @@ def main():
             )
             local_slf_output: Path = get_local_slf_output()
 
+            try:
+                patients = sftp.list_files(str(server_year_dir))
+                logger.info(f"Found {len(patients)} patient folders: {patients}")
+            except FileNotFoundError:
+                logger.warning(
+                    f"[SKIP] Année {year} introuvable sur le SFTP ({server_year_dir}). Passage à l'année suivante.")
+                continue
+
+            if not patients:
+                logger.info(f"[INFO] Aucune donnée trouvée pour l'année {year}.")
+                continue
+
             slf_converter: SLFConversion = SLFConversion(
                 local_slf_output, server_year_dir, sftp
             )
-            slf_converter.convert_folder_to_slf()
+            slf_converter.convert_folder_to_slf(year, patients)
             slf_converter.upload_slf_folders_to_server()
 
         sftp.close()

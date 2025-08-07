@@ -31,7 +31,7 @@ class SLFConversion:
         self.remote_year_dir = remote_year_dir
         self.sftp_client = sftp_client
 
-    def convert_folder_to_slf(self):
+    def convert_folder_to_slf(self, year: str, patients: List[str]):
         """
         Downloads all patient folders for a given year from a remote SFTP server in a temporary folder,
         skips those that already contain an SLF output folder,
@@ -44,9 +44,6 @@ class SLFConversion:
 
             local_year_dir: Path = tmp_root_path / self.remote_year_dir.name
             local_year_dir.mkdir(parents=True, exist_ok=True)
-
-            patients = self.sftp_client.list_files(str(self.remote_year_dir))
-            logger.info(f"Found {len(patients)} patient folders: {patients}")
 
             downloaded_count: int = 0
             for patient_id in patients:
@@ -98,6 +95,9 @@ class SLFConversion:
             return
 
         for patient_folder in local_year_dir.iterdir():
+            print(f"patient folder: {patient_folder}")
+            print(f"patient folder stem: {patient_folder.stem}")
+
             if not patient_folder.is_dir():
                 continue
 
@@ -108,6 +108,16 @@ class SLFConversion:
             )
 
             remote_raw_dir: PurePosixPath = self.remote_year_dir / folder_patient_id
+            existing_folders = self.sftp_client.list_files(str(remote_raw_dir))
+            slf_folders: List[str] = [
+                name
+                for name in existing_folders
+                if name.startswith(f"slf_{patient_folder.stem}")
+            ]
+            if slf_folders:
+                logger.info(f"[SKIP] SLF already exists")
+                continue
+
             try:
                 remote_files: List[str] = self.sftp_client.list_files(
                     str(remote_raw_dir)
