@@ -59,3 +59,13 @@ def get_local_slf_output() -> Path:
 
     local_slf_output.mkdir(parents=True, exist_ok=True)
     return local_slf_output
+
+def lowercase_extensions(dir_path: Path):
+    """
+    Lower all file extensions in a given folder.
+    """
+    for file in dir_path.rglob("*"):
+        if file.is_file():
+            new_path = file.with_suffix(file.suffix.lower())
+            if new_path != file:
+                file.rename(new_path)

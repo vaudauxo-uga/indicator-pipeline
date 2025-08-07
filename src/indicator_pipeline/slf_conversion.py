@@ -4,7 +4,7 @@ from pathlib import Path, PurePosixPath
 from typing import List
 
 from indicator_pipeline.sftp_client import SFTPClient
-from indicator_pipeline.utils import parse_patient_and_visit
+from indicator_pipeline.utils import parse_patient_and_visit, lowercase_extensions
 from sleeplab_converter.mars_database.convert import convert_dataset
 
 logger = logging.getLogger(__name__)
@@ -69,6 +69,7 @@ class SLFConversion:
                 logger.info(
                     f"[COPY] Copied patient {patient_id} locally to {local_patient_dir}"
                 )
+                lowercase_extensions(local_patient_dir)
                 downloaded_count += 1
 
             logger.info(
