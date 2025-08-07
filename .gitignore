@@ -18,3 +18,5 @@ logs/
 
 #Snakemake
 .snakemake/
+*.done
+*.flag
