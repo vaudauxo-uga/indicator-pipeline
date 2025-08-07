@@ -95,6 +95,9 @@ class SLFConversion:
             return
 
         for patient_folder in local_year_dir.iterdir():
+            print(f"patient folder: {patient_folder}")
+            print(f"patient folder stem: {patient_folder.stem}")
+
             if not patient_folder.is_dir():
                 continue
 
@@ -105,6 +108,16 @@ class SLFConversion:
             )
 
             remote_raw_dir: PurePosixPath = self.remote_year_dir / folder_patient_id
+            existing_folders = self.sftp_client.list_files(str(remote_raw_dir))
+            slf_folders: List[str] = [
+                name
+                for name in existing_folders
+                if name.startswith(f"slf_{patient_folder.stem}")
+            ]
+            if slf_folders:
+                logger.info(f"[SKIP] SLF already exists")
+                continue
+
             try:
                 remote_files: List[str] = self.sftp_client.list_files(
                     str(remote_raw_dir)
