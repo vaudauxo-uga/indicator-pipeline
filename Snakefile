@@ -10,6 +10,9 @@ YEARS = [2020, 2022, 2023, 2024, 2025]
 
 
 def docker_path(p):
+    """
+    Convert a Windows-style file path to a Docker-compatible Unix-style path.
+    """
     p = Path(p).absolute()
     drive = p.drive[0].lower()
     path_no_drive = str(p)[len(p.drive):].replace('\\','/')
