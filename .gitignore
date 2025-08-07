@@ -15,3 +15,6 @@ dist/
 
 # Logger
 logs/
+
+#Snakemake
+.snakemake/
