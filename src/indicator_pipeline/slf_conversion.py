@@ -31,7 +31,7 @@ class SLFConversion:
         self.remote_year_dir = remote_year_dir
         self.sftp_client = sftp_client
 
-    def convert_folder_to_slf(self):
+    def convert_folder_to_slf(self, year: str, patients: List[str]):
         """
         Downloads all patient folders for a given year from a remote SFTP server in a temporary folder,
         skips those that already contain an SLF output folder,
@@ -44,9 +44,6 @@ class SLFConversion:
 
             local_year_dir: Path = tmp_root_path / self.remote_year_dir.name
             local_year_dir.mkdir(parents=True, exist_ok=True)
-
-            patients = self.sftp_client.list_files(str(self.remote_year_dir))
-            logger.info(f"Found {len(patients)} patient folders: {patients}")
 
             downloaded_count: int = 0
             for patient_id in patients:
