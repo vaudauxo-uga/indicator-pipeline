@@ -3,23 +3,68 @@ from pathlib import Path
 
 DESKTOP = os.path.expanduser("~/Desktop")
 SLF_OUTPUT = Path(DESKTOP) / "slf-output"
+LOGS_DIR = Path(DESKTOP) / "indicator-pipeline" / "logs"
+ABOSA_OUTPUT = Path(DESKTOP) / "abosa-output"
 
-YEARS = config.get("years",[2022])
+YEARS = [2020, 2022, 2023, 2024, 2025]
+
+
+def docker_path(p):
+    p = Path(p).absolute()
+    drive = p.drive[0].lower()
+    path_no_drive = str(p)[len(p.drive):].replace('\\','/')
+    return f"/{drive}{path_no_drive}"
+
 
 rule all:
     input:
-        expand(str(SLF_OUTPUT / "slf_to_compute" / "{year}" / "PA21843_V2"),year=YEARS)
+        "step2.done"
+
 
 rule run_pipeline:
     output:
-        directory(SLF_OUTPUT / "slf_to_compute" / "{year}" / "PA21843_V2")
+        touch("step1.done")
     params:
-        year="{year}",
-        slf_output=str(SLF_OUTPUT)
+        years=" ".join(str(y) for y in YEARS),
+        slf_output=docker_path(SLF_OUTPUT),
+        logs_dir=docker_path(LOGS_DIR)
     shell:
         """
         docker run --rm \
-        --env-file .env \
+          --env-file .env \
+          -v {params.logs_dir}:/app/logs \
           -v {params.slf_output}:/app/slf-output \
-          indicator-pipeline run-pipeline --years {params.year}
+          indicator-pipeline run-pipeline --step slf_conversion --years {params.years}
+        """
+
+
+rule wait_for_manual_step:
+    input:
+        "step1.done"
+    output:
+        "manual_ready.flag"
+    message:
+        "==> Étape manuelle requise : préparez les données, puis créez le fichier 'manual_ready.flag' pour continuer"
+    run:
+        print("⚠️ Étape manuelle requise. Créez le fichier 'manual_ready.flag' pour continuer.")
+        import sys
+
+        sys.exit("Arrêt volontaire : étape manuelle à réaliser.")
+
+
+rule import_to_mars:
+    input:
+        "manual_ready.flag"
+    output:
+        touch("step2.done")
+    params:
+        logs_dir=docker_path(LOGS_DIR),
+        abosa_output=docker_path(ABOSA_OUTPUT)
+    shell:
+        """
+        docker run --rm \
+          --env-file .env \
+          -v {params.logs_dir}:/app/logs \
+          -v {params.abosa_output}:/abosa-output \
+          indicator-pipeline run-pipeline --step import_to_mars
         """
