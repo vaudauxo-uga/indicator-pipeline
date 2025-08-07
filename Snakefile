@@ -68,3 +68,14 @@ rule import_to_mars:
           -v {params.abosa_output}:/abosa-output \
           indicator-pipeline run-pipeline --step import_to_mars
         """
+
+rule clean:
+    run:
+        import os
+        for f in ["step1.done", "step2.done", "manual_ready.flag"]:
+            try:
+                os.remove(f)
+                print(f"Supprimé : {f}")
+            except FileNotFoundError:
+                pass
+        print("✅ Tous les fichiers .done et .flag ont été supprimés.")
