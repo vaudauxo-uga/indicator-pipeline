@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 
 DESKTOP = os.path.expanduser("~/Desktop")
@@ -6,7 +7,8 @@ SLF_OUTPUT = Path(DESKTOP) / "slf-output"
 LOGS_DIR = Path(DESKTOP) / "indicator-pipeline" / "logs"
 ABOSA_OUTPUT = Path(DESKTOP) / "abosa-output"
 
-YEARS = config["years"].split()
+DEFAULT_YEAR = str(datetime.now().year)
+YEARS = config.get("years",DEFAULT_YEAR).split()
 
 
 def docker_path(p):
@@ -75,6 +77,7 @@ rule import_to_mars:
 rule clean:
     run:
         import os
+
         for f in ["step1.done", "step2.done", "manual_ready.flag"]:
             try:
                 os.remove(f)
