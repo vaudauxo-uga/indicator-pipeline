@@ -54,9 +54,10 @@ SFTP_USER=user
 SFTP_KEY_PATH=pathtosshkey
 SFTP_PASSWORD=password
 SFTP_PORT=sftpport
-```
 
-Location:
+ABOSA_OUTPUT_PATH=/abosa-output
+LOG_OUTPUT_PATH=/app/logs
+```
 
 The .env file must be placed at the root of the project, next to pyproject.toml.
 
@@ -64,18 +65,68 @@ It is automatically loaded using the `python-dotenv` library in the appropriate 
 
 **Do not version this file**: it is excluded by .gitignore.
 
+### Docker
+
+The project includes a `Dockerfile` to enable isolated and portable execution.
+
+Build the Docker image :
+```bash
+docker build -t indicator-pipeline .
+```
+
+**Windows users**: Ensure Docker Desktop is allowed to access your local drive (e.g., `C:`) in Docker settings.
+
 ## Main Script
 
-### Execution
+### Snakemake Workflow (Recommended)
+
+For a fully orchestrated, reproducible execution:
+
+```bash
+snakemake --cores 1
+```
+
+You can customize the years to process using the `--config` argument:
+
+```bash
+snakemake --config years="2023 2024" --cores 1 
+```
+If this argument is not provided, the **current year** is used by default.
+
+Snakemake will:
+- Run the `slf_conversion` step. 
+- Pause for manual processing in ABOSA. 
+- Resume with the `import_to_mars` step.
+
+Snakemake uses flag files to manage execution state:
+
+- `step1.done`: Marks completion of the SLF conversion
+- `manual_ready.flag`: Created manually after ABOSA is run
+- `step2.done`: Marks successful import to the MARS database
+
+After the execution of the whole pipeline, these control files can be deleted by launching:
+```bash
+snakemake clean --cores 1
+```
+
+📝 The Snakefile assumes data is saved on the user's Desktop (`~/Desktop`). If you're working elsewhere, edit the paths in Snakefile (`SLF_OUTPUT`, `LOGS_DIR`, `ABOSA_OUTPUT`, etc.).
+
+### Manual Script Execution (Alternative)
 To execute the pipeline manually:
 
 ```bash
-run-pipeline --years
+run-pipeline --step slf_conversion --years 2023 2024
+```
+
+Then, after running ABOSA manually, launch:
+```bash
+run-pipeline --step import_to_mars
 ```
 
 ### Arguments
-`--years`: Required. One or more years to process, each corresponding to a folder name on the SFTP server. Multiple years can be provided as space-separated values (e.g., --years 2024 2025).
+`--step`: Required, either `slf_conversion` or `import_to_mars`
 
+`--years`: Required for slf_conversion, space-separated list of years to process (e.g., --years 2023 2024)
 
 ## Additional Notes
 Only `.xlsx` files are supported in the ABOSA output folders.
