@@ -6,7 +6,7 @@ SLF_OUTPUT = Path(DESKTOP) / "slf-output"
 LOGS_DIR = Path(DESKTOP) / "indicator-pipeline" / "logs"
 ABOSA_OUTPUT = Path(DESKTOP) / "abosa-output"
 
-YEARS = [2020, 2022, 2023, 2024, 2025]
+YEARS = config["years"].split()
 
 
 def docker_path(p):
