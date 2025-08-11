@@ -71,15 +71,6 @@ def df_to_json_payloads(df: pd.DataFrame) -> List[Dict[str, Any]]:
     def extract(patient_row, keys: List[str]) -> Dict[str, Any]:
         return {key: try_parse_number(patient_row.get(key)) for key in keys}
 
-    def try_parse_number(value, as_int: bool = False) -> Optional[Union[int, float]]:
-        try:
-            if isinstance(value, str):
-                value = value.replace(",", ".")
-            number = float(value)
-            return int(number) if as_int else number
-        except (ValueError, TypeError):
-            return None
-
     payloads: List[Dict[str, Any]] = []
 
     for _, row in df.iterrows():

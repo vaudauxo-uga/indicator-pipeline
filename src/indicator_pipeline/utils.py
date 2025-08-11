@@ -1,6 +1,7 @@
 import os
 import re
 from pathlib import Path
+from typing import Optional, Union
 
 
 def parse_patient_and_visit(filename: str) -> tuple[str, str]:
@@ -25,6 +26,20 @@ def extract_subject_id_from_filename(edf_file: Path) -> str:
     patient_id, visit_suffix = parse_patient_and_visit(stem)
 
     return f"PA{patient_id}_V{visit_suffix}" if visit_suffix else f"PA{patient_id}"
+
+
+def try_parse_number(value, as_int: bool = False) -> Optional[Union[int, float]]:
+    """
+    Converts a string to an int or float. Replaces commas with periods to handle European decimal formats.
+    Returns None if the conversion fails.
+    """
+    try:
+        if isinstance(value, str):
+            value = value.replace(",", ".")
+        number = float(value)
+        return int(number) if as_int else number
+    except (ValueError, TypeError):
+        return None
 
 
 def get_repo_root() -> Path:
@@ -59,6 +74,7 @@ def get_local_slf_output() -> Path:
 
     local_slf_output.mkdir(parents=True, exist_ok=True)
     return local_slf_output
+
 
 def lowercase_extensions(dir_path: Path):
     """
