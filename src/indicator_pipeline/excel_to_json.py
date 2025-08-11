@@ -2,11 +2,11 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import List, Set, Dict, Any, Optional, Union
+from typing import List, Set, Dict, Any
 
 import pandas as pd
 
-from indicator_pipeline.utils import get_repo_root, parse_patient_and_visit
+from indicator_pipeline.utils import get_repo_root, parse_patient_and_visit, try_parse_number
 
 logger = logging.getLogger(__name__)
 DEFAULT_LOG_DIR = Path(os.environ.get("LOG_OUTPUT_PATH", "logs"))
