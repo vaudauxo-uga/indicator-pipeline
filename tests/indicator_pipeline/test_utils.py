@@ -4,7 +4,7 @@ import pytest
 
 from indicator_pipeline.utils import (
     parse_patient_and_visit,
-    extract_subject_id_from_filename,
+    extract_subject_id_from_filename, try_parse_number,
 )
 
 
@@ -19,6 +19,7 @@ from indicator_pipeline.utils import (
 def test_parse_patient_and_visit(filename, expected):
     assert parse_patient_and_visit(filename) == expected
 
+
 @pytest.mark.parametrize("filename, expected", [
     (Path("PA123_V1.edf"), "PA123_V1"),
     (Path("PA123V2.edf"), "PA123_V2"),
@@ -28,3 +29,14 @@ def test_parse_patient_and_visit(filename, expected):
 ])
 def test_extract_subject_id_from_filename(filename, expected):
     assert extract_subject_id_from_filename(filename) == expected
+
+
+@pytest.mark.parametrize("value,as_int,expected", [
+    ("42", True, 42),
+    ("3.14", False, 3.14),
+    ("3,14", False, 3.14),
+    (None, False, None),
+    ("abc", True, None)
+])
+def test_try_parse_number(value, as_int, expected):
+    assert try_parse_number(value, as_int) == expected

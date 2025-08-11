@@ -2,11 +2,11 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import List, Set, Dict, Any, Optional, Union
+from typing import List, Set, Dict, Any
 
 import pandas as pd
 
-from indicator_pipeline.utils import get_repo_root, parse_patient_and_visit
+from indicator_pipeline.utils import get_repo_root, parse_patient_and_visit, try_parse_number
 
 logger = logging.getLogger(__name__)
 DEFAULT_LOG_DIR = Path(os.environ.get("LOG_OUTPUT_PATH", "logs"))
@@ -70,15 +70,6 @@ def df_to_json_payloads(df: pd.DataFrame) -> List[Dict[str, Any]]:
 
     def extract(patient_row, keys: List[str]) -> Dict[str, Any]:
         return {key: try_parse_number(patient_row.get(key)) for key in keys}
-
-    def try_parse_number(value, as_int: bool = False) -> Optional[Union[int, float]]:
-        try:
-            if isinstance(value, str):
-                value = value.replace(",", ".")
-            number = float(value)
-            return int(number) if as_int else number
-        except (ValueError, TypeError):
-            return None
 
     payloads: List[Dict[str, Any]] = []
 
@@ -207,10 +198,18 @@ def excel_to_json() -> None:
         outside_repo_dir: Path = repo_root.parent
         abosa_output: Path = outside_repo_dir / "abosa-output"
 
+    if not abosa_output.exists():
+        logger.error(f"Le dossier attendu n'existe pas : {abosa_output}")
+        raise FileNotFoundError(f"Le dossier abosa-output est manquant : {abosa_output}")
+
     processed: Set[str] = load_processed()
     new_processed: Set[str] = set(processed)
 
     param_dirs: List[Path] = find_parameter_folders(abosa_output)
+
+    if not param_dirs:
+        logger.error("Aucun dossier à traiter dans abosa-output")
+        raise RuntimeError("Aucun dossier à traiter dans abosa-output")
 
     for folder in param_dirs:
         rel_path: str = str(folder.relative_to(abosa_output))
