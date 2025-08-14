@@ -23,12 +23,12 @@ def docker_path(p):
 
 rule all:
     input:
-        "step2.done"
+        "analysis_complete.done"
 
 
 rule run_pipeline:
     output:
-        touch("step1.done")
+        touch("slf_conversion.done")
     params:
         years=" ".join(str(y) for y in YEARS),
         slf_output=docker_path(SLF_OUTPUT),
@@ -45,13 +45,13 @@ rule run_pipeline:
 
 rule wait_for_manual_step:
     input:
-        "step1.done"
+        "slf_conversion.done"
     output:
-        "manual_ready.flag"
+        "abosa_complete.flag"
     message:
-        "==> Étape manuelle requise : préparez les données, puis créez le fichier 'manual_ready.flag' pour continuer"
+        "==> Étape manuelle requise : préparez les données, puis créez le fichier 'abosa_complete.flag' pour continuer"
     run:
-        print("⚠️ Étape manuelle requise. Créez le fichier 'manual_ready.flag' pour continuer.")
+        print("⚠️ Étape manuelle requise. Créez le fichier 'abosa_complete.flag' pour continuer.")
         import sys
 
         sys.exit("Arrêt volontaire : étape manuelle à réaliser.")
@@ -59,9 +59,9 @@ rule wait_for_manual_step:
 
 rule import_to_mars:
     input:
-        "manual_ready.flag"
+        "abosa_complete.flag"
     output:
-        touch("step2.done")
+        touch("analysis_complete.done")
     params:
         logs_dir=docker_path(LOGS_DIR),
         abosa_output=docker_path(ABOSA_OUTPUT)
@@ -78,7 +78,7 @@ rule clean:
     run:
         import os
 
-        for f in ["step1.done", "step2.done", "manual_ready.flag"]:
+        for f in ["slf_conversion.done", "analysis_complete.done", "abosa_complete.flag"]:
             try:
                 os.remove(f)
                 print(f"Supprimé : {f}")
