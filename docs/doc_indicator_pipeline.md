@@ -35,8 +35,8 @@
     - Fichiers **Excel**
 - **Librairies externes** :
     - Manipulation des fichiers EDF : `pyedflib`, `mne`
-    - Traitement des données : `pandas`, `numpy`, `tqdm`
-    - Connexions & système : `paramiko`, `python-dotenv`, `mysql-connector-python`
+    - Traitement des données : `pandas`, `numpy`, `tqdm`, `openpyxl`
+    - Connexions & système : `paramiko`, `python-dotenv`
     - Fichiers spécifiques : `striprtf`, `sleeplab-format`
 - **Environnement cible** : Machine dédiée ou VM sous Windows (le système est requis pour exécuter ABOSA, incompatible avec Linux ou macOS)
 
