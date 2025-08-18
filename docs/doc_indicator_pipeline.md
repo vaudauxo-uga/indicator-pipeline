@@ -2,7 +2,7 @@
 
 # 🧭 Vue d’ensemble
 
-- L’objectif de ce pipeline est de calculer des indicateurs à partir du signal SpO2 des fichiers de polysomnographie (*.edf* et annotations en *.csv*, *.txt* et/ou *.rtf*) disponibles sur le serveur de stockage. Les fichiers de polysomnographie sont d’abord convertis au format *sleeplab* (*slf*), et stockés à la fois sur le serveur de stockage et en local. Puis le calcul des indicateurs par le logiciel se fait manuellement via [ABOSA](https://zenodo.org/records/6962129), et enfin les données en sortie du logiciel sont intégrées dans la base de données MARS.
+- L’objectif de ce pipeline est de calculer des indicateurs à partir du signal SpO₂ des fichiers de polysomnographie (*.edf* et annotations en *.csv*, *.txt* et/ou *.rtf*) disponibles sur le serveur de stockage. Les fichiers de polysomnographie sont d’abord convertis au format *sleeplab* (*slf*), et stockés à la fois sur le serveur de stockage et en local. Puis le calcul des indicateurs par le logiciel se fait manuellement via [ABOSA](https://zenodo.org/records/6962129), et enfin les données en sortie du logiciel sont intégrées dans la base de données MARS.
 - Ce pipeline a été créé pour une utilisation sur une machine dédiée ou une VM sous Windows.
 - Les données d’entrée sont les données de polysomnographie présentes sur le serveur de stockage. En sortie, on retrouve les indicateurs calculés dans les tables MARS dédiées aux mesures d’oxymétrie.
 
@@ -79,7 +79,7 @@ indicator-pipeline/
     - `indicator_pipeline/`
         - Contient les scripts principaux du pipeline : module principal `run_pipeline`, connexion au serveur sftp `sftp_client`, conversion des psg en .slf `slf_conversion`, dump des données ABOSA en excel dans un payload json `excel_to_json`, la configuration du logger `logging_config`, et fonctions `utils`.
     - `sleeplab_converter/`
-        - Convertisseur des fichiers de polysomnographie au format sleeplab, code provenant du repo git `sleeplab-converter-mars`.
+        - Convertisseur des fichiers de polysomnographie au format sleeplab, code provenant du [repo git](https://github.com/HP2-data/sleeplab-converter-mars) `sleeplab-converter-mars`.
         - Sous module `mars_database/` comportant les modules de conversion et de traitement des fichiers d’annotations spécifiques aux appareils utilisés au labo du sommeil du CHU Grenoble.
 
 ---
@@ -108,6 +108,7 @@ indicator-pipeline/
     - les fichiers générés par `setuptools`,
     - les fichiers temporaires ou générés automatiquement
     - les environnements virtuels (`.venv/`, etc.)
+    - les fichiers générés par Snakemake (dossier `.snakemake/`, fichier _.done_ et _.flag_)
 
 ## 🐳 Montage de l’image Docker
 
@@ -123,7 +124,7 @@ indicator-pipeline/
 
 ## ⚙️ Configuration de l’environnement `.env`
 
-- Le pipeline utilise un fichier `.env` pour stocker des **variables d’environnement sensibles ou spécifiques à l’environnement d’exécution**, comme les identifiants SFTP ou les informations de connexion à la base de données.
+- Le pipeline utilise un fichier `.env` pour stocker des **variables d’environnement sensibles ou spécifiques à l’environnement d’exécution**, comme les identifiants SFTP ou ou les chemins des dossiers utilisés.
 - Exemple de fichier `.env` :
 
 ```bash
@@ -177,7 +178,7 @@ Cette séparation est **gérée automatiquement** dans l’exécution via Snakem
     snakemake --config years="2024 2025" --cores 1
     ```
     
-- L'argument `--config years="2024 2025"` permet de spécifier les années à traiter lors de l'exécution du pipeline. Si aucune année n'est précisée, l'année en cours est utilisée par défaut.
+- L'argument `--config years="2024 2025"` permet de spécifier les années à traiter lors de l'exécution du pipeline. Si aucune année n'est précisée, **l'année en cours est utilisée par défaut**.
 - Cette méthode garantit une **exécution modulaire, traçable et reproductible** des différentes étapes.
 - L’exécution complète suit trois règles :
     1. `run_pipeline` : convertit les fichiers PSG au format *slf*
@@ -216,7 +217,7 @@ Cette séparation est **gérée automatiquement** dans l’exécution via Snakem
 
 # 🦌 Calcul des indicateurs avec ABOSA
 
-Afin de calculer les indicateurs du signal SpO2, il faut utiliser le logiciel ABOSA manuellement. Une fois que la première étape du pipeline a été réalisée, les dossiers convertis en *slf* sont stockés dans le dossier `slf-output`, contenant un sous-dossier par année. 
+Afin de calculer les indicateurs du signal SpO₂, il faut utiliser le logiciel ABOSA manuellement. Une fois que la première étape du pipeline a été réalisée, les dossiers convertis en *slf* sont stockés dans le dossier `slf-output`, contenant un sous-dossier par année. 
 
 ### Paramètres de calcul
 
@@ -253,7 +254,7 @@ Une fois les calculs des indicateurs effectués, plusieurs fichiers sont édité
 - `EventData_<date_et_heure_du_calcul>`
 Regroupe les fichiers Excel contenant les événements individuels de désaturation et récupération pour chaque fichier *SLF* traité.
 - `ExtraInfo_<date_et_heure_du_calcul>` 
-Regroupe les fichiers texte contenant les métadonnées relatives au calcul pour chaque fichier *SLF* traité. On y retrouve les paramètres de détection et de nettoyage, les durées de sommeil par stade, les infos techniques (étiquette utilisée pour le signal SpO2 par exemple), la détection d’artefacts, ainsi que les causes d’échec de l’analyse en cas de problème.
+Regroupe les fichiers texte contenant les métadonnées relatives au calcul pour chaque fichier *SLF* traité. On y retrouve les paramètres de détection et de nettoyage, les durées de sommeil par stade, les infos techniques (étiquette utilisée pour le signal SpO₂ par exemple), la détection d’artefacts, ainsi que les causes d’échec de l’analyse en cas de problème.
 - `ParametersValues_<date_et_heure_du_calcul>` 
 Contient un fichier Excel `ParameterValues` unique qui regroupe l'ensemble des valeurs de paramètres calculées à partir des fichiers *SLF* (une ligne par fichier PAxxxx_Vx). 
 Ce dossier contient également un fichier texte `FileNotes` regroupant toutes les étiquettes de signal de saturation en oxygène saisies et le premier fichier depuis lequel l'étiquette de saturation primaire en oxygène est récupérée.
@@ -266,7 +267,7 @@ Ce dossier contient également un fichier texte `FileNotes` regroupant toutes le
 
 ## 🔌 Connexion au serveur SFTP
 
-- **`sftp_client.py` - Client SFTP simplifié basé sur `paramiko`**
+**`sftp_client.py` - Client SFTP simplifié basé sur `paramiko`**
 
 Classe utilitaire permettant d'établir une connexion SFTP et de transférer des fichiers ou dossiers entre un système local et un serveur distant.
 
