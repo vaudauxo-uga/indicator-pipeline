@@ -19,7 +19,6 @@ dependencies = [
     "mne",
     "tqdm",
     "striprtf",
-    "mysql-connector-python",
     "sleeplab-format @ git+https://github.com/UEF-SmartSleepLab/sleeplab-format.git@4d5bf190b662725e191f2c154b782d96692ea2d2"
 ]
 
