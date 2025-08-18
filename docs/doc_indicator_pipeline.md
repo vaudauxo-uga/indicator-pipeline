@@ -1,12 +1,37 @@
 # Documentation indicator-pipeline
 
+# Table des matières
+
+1. 🧭 [Vue d'ensemble](#-vue-densemble)
+    1. 🌀 [Description du flux d’exécution](#-description-du-flux-dexécution)
+2. 🔧 [Stack technique](#-stack-technique)
+3. 🗂️ [Structure du projet](#-structure-du-projet)
+4. ⚙️ [Installation et configuration](#-installation-et-configuration)
+    1. 🖥️ [Installation en local](#-installation-en-local)
+    2. 🐳 [Montage de l’image Docker](#-montage-de-limage-docker)
+    3. ⚙️ [Configuration de l’environnement .env](#-configuration-de-lenvironnement-env)
+5. 🚀 [Exécution du pipeline](#-exécution-du-pipeline)
+    1. 🐍 [Option 1 - Exécution orchestrée via Snakemake (Recommandée)](#-option-1--exécution-orchestrée-via-snakemake-recommandée)
+    2. 🧪 [Option 2 - Exécution manuelle (script principal)](#-option-2--exécution-manuelle-script-principal)
+6. 🦌 [Calcul des indicateurs avec ABOSA](#-calcul-des-indicateurs-avec-abosa)
+    1. 📝 [Paramètres de calcul](#-paramètres-de-calcul)
+    2. 🩸 [Signal de saturation](#-signal-de-saturation)
+    3. 💾 [Fichiers de sortie](#-fichiers-de-sortie)
+7. 🐍 [Fonctionnement du code du pipeline](#-fonctionnement-du-code-du-pipeline)
+    1. 🔌 [Connexion au serveur SFTP](#-connexion-au-serveur-sftp)
+    2. 🔄 [Conversion PSG vers .slf](#-conversion-psg-vers-slf)
+    3. 🔄 [Conversion Excel vers JSON](#-conversion-excel-vers-json)
+    4. 🧰 [Utilitaires](#-utilitaires)
+    5. 📋 [Logging](#-logging)
+8. 📚 [Ressources et annexes](#-ressources-et-annexes)
+
 # 🧭 Vue d’ensemble
 
 - L’objectif de ce pipeline est de calculer des indicateurs à partir du signal SpO₂ des fichiers de polysomnographie (*.edf* et annotations en *.csv*, *.txt* et/ou *.rtf*) disponibles sur le serveur de stockage. Les fichiers de polysomnographie sont d’abord convertis au format *sleeplab* (*slf*), et stockés à la fois sur le serveur de stockage et en local. Puis le calcul des indicateurs par le logiciel se fait manuellement via [ABOSA](https://zenodo.org/records/6962129), et enfin les données en sortie du logiciel sont intégrées dans la base de données MARS.
 - Ce pipeline a été créé pour une utilisation sur une machine dédiée ou une VM sous Windows.
 - Les données d’entrée sont les données de polysomnographie présentes sur le serveur de stockage. En sortie, on retrouve les indicateurs calculés dans les tables MARS dédiées aux mesures d’oxymétrie.
 
-## 📄 Description du flux d’exécution
+## 🌀 Description du flux d’exécution
 
 - **Connexion au serveur SFTP** : récupération des fichiers .*edf* et fichiers d’annotations (.*csv*, .*txt*, .*rtf*) pour les années spécifiées.
 - **Conversion sleeplab** : transformation des fichiers de polysomnographie au format sleeplab (via le module `sleeplab_converter`). Les fichiers convertis sont enregistrés:
@@ -88,7 +113,7 @@ indicator-pipeline/
 
 # ⚙️ Installation et configuration
 
-## 🔁 Installation en local
+## 🖥️ Installation en local
 
 - Le projet est versionné sur Git et doit être cloné localement pour être utilisé :
     
@@ -167,7 +192,7 @@ Cette séparation est **gérée automatiquement** dans l’exécution via Snakem
 
 ⚙️ En exécution manuelle, il est de la responsabilité de l’utilisateur de **lancer les étapes une par une** et de s’assurer que l’analyse ABOSA est faite avant de poursuivre.
 
-### 🐍 Option 1 – Exécution orchestrée via Snakemake (Recommandée)
+## 🐍 Option 1 – Exécution orchestrée via Snakemake (Recommandée)
 
 - Le projet inclut un `Snakefile` définissant les étapes du pipeline sous forme de règles Snakemake.
 - Les **volumes Docker sont générés dynamiquement** dans le `Snakefile`, en fonction de l’environnement local de l’utilisateur. Les chemins suivants sont utilisés :
@@ -200,7 +225,7 @@ Cette séparation est **gérée automatiquement** dans l’exécution via Snakem
 
 📝 **Remarque** : les chemins par défaut du Snakefile pointent vers le **Bureau de l’utilisateur** (`~/Desktop`). Si le projet est exécuté depuis un autre emplacement, il faudra **adapter les chemins définis dans le `Snakefile` (variables `SLF_OUTPUT`, `LOGS_DIR`, etc.)** en conséquence.
 
-### 🧪 Option 2 – Exécution manuelle (script principal)
+## 🧪 Option 2 – Exécution manuelle (script principal)
 
 - Commande principale pour lancer le pipeline (script principal `run_pipeline.py`)
     
@@ -221,7 +246,7 @@ Cette séparation est **gérée automatiquement** dans l’exécution via Snakem
 
 Afin de calculer les indicateurs du signal SpO₂, il faut utiliser le logiciel ABOSA manuellement. Une fois que la première étape du pipeline a été réalisée, les dossiers convertis en *slf* sont stockés dans le dossier `slf-output`, contenant un sous-dossier par année. 
 
-### Paramètres de calcul
+## 📝 Paramètres de calcul
 
 Une fois l’interface graphique d’ABOSA ouverte, les paramètres suivants sont à régler :
 
@@ -234,7 +259,7 @@ Une fois l’interface graphique d’ABOSA ouverte, les paramètres suivants son
 
 *Interface graphique du logiciel ABOSA*
 
-### Signal de saturation
+## 🩸 Signal de saturation
 
 Une fois les paramètres remplis, cliquer sur le bouton *“RUN”* (5). Une fenêtre s’ouvre pour choisir sur quel signal se baser pour calculer les indicateurs. Sélectionner celui correspondant à la saturation dans la liste “*primary label*” **(6), et rajouter les autres formats possibles dans la partie “*secondary labels*” (7) grâce au bouton *“Add”* (8). Les différents formats du signal de saturation sont les suivants :
 
@@ -249,7 +274,7 @@ Enfin, pour lancer le calcul des indicateurs, appuyer sur le bouton *“Confirm 
 
 *Interface permettant de sélectionner les labels des signaux de saturation avant de lancer les calculs*
 
-### 📃 Fichiers de sortie
+## 💾 Fichiers de sortie
 
 Une fois les calculs des indicateurs effectués, plusieurs fichiers sont édités en sortie. Ils sont répartis en trois dossiers :
 
@@ -366,7 +391,7 @@ Ce module contient la classe `SLFConversion`, qui centralise la logique de conve
 
 ---
 
-## 📦 Conversion Excel vers JSON
+## 🔄 Conversion Excel vers JSON
 
 - `excel_to_json.py`
     
@@ -444,7 +469,7 @@ Ce module contient la classe `SLFConversion`, qui centralise la logique de conve
 
 ---
 
-## 📝 Logging
+## 📋 Logging
 
 - `logging_config.py` - Utilitaires de configuration du journal (logging)
     - `setup_logging(years: List[str]): None`
@@ -459,7 +484,7 @@ Ce module contient la classe `SLFConversion`, qui centralise la logique de conve
 
 ---
 
-# 📄 Ressources et annexes
+# 📚 Ressources et annexes
 
 - `README.md` – résumé général
 - `LICENSE.txt` – licence du convertisseur [**sleeplab-converter-mars**](https://github.com/HP2-data/sleeplab-converter-mars)
