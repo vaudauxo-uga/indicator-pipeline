@@ -15,6 +15,8 @@
 - **Lancement manuel d’ABOSA** *(hors pipeline)* : les fichiers convertis doivent être ouverts et analysés **manuellement** dans le logiciel ABOSA afin d’y calculer les indicateurs d’oxymétrie. Le logiciel génère en sortie plusieurs dossiers, chacun contenant un ou plusieurs fichiers Excel. Ces fichiers regroupent les indicateurs extraits, ainsi que des métadonnées sur les enregistrements analysés.
 - **Import dans MARS** : les résultats générés par ABOSA sont sous forme de fichiers Excel. Les indicateurs conservés sont dans le fichier *ParameterValues*. Ils sont intégrés dans les tables appropriées de la base de données MARS, à partir d’une méthode POST qui envoie ces données à une API sous forme de payloads *json*.
 
+![*Schéma du pipeline*](indicator_pipeline_diagram.png)
+
 ---
 
 # 🔧 Stack technique
