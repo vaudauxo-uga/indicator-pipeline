@@ -95,9 +95,6 @@ class SLFConversion:
             return
 
         for patient_folder in local_year_dir.iterdir():
-            print(f"patient folder: {patient_folder}")
-            print(f"patient folder stem: {patient_folder.stem}")
-
             if not patient_folder.is_dir():
                 continue
 
