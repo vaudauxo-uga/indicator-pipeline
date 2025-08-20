@@ -220,7 +220,7 @@ def excel_to_json() -> None:
         indicator_df: pd.DataFrame = get_excel_from_rel_path(folder, rel_path)
         payloads: List[Dict[str, Any]] = df_to_json_payloads(indicator_df)
 
-        output_dir: Path = DEFAULT_LOG_DIR / "json_dumps"
+        output_dir: Path = get_log_dir() / "json_dumps"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         safe_filename = rel_path.replace("/", "__").replace("\\", "__") + ".json"
