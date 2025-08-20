@@ -6,12 +6,10 @@ from typing import List, Set, Dict, Any
 
 import pandas as pd
 
-from indicator_pipeline.utils import get_repo_root, parse_patient_and_visit, try_parse_number
+from indicator_pipeline.utils import get_repo_root, parse_patient_and_visit, try_parse_number, get_log_dir
 
 logger = logging.getLogger(__name__)
-DEFAULT_LOG_DIR = Path(os.environ.get("LOG_OUTPUT_PATH", "logs"))
-DEFAULT_LOG_DIR.mkdir(parents=True, exist_ok=True)
-PROCESSED_PATH: Path = DEFAULT_LOG_DIR / "processed.json"
+PROCESSED_PATH: Path = get_log_dir() / "processed.json"
 
 
 def load_processed() -> Set[str]:
