@@ -8,7 +8,7 @@ LOGS_DIR = Path(DESKTOP) / "indicator-pipeline" / "logs"
 ABOSA_OUTPUT = Path(DESKTOP) / "abosa-output"
 
 DEFAULT_YEAR = str(datetime.now().year)
-YEARS = config.get("years",DEFAULT_YEAR).split()
+YEARS = str(config.get("years",DEFAULT_YEAR)).split()
 
 
 def docker_path(p):
