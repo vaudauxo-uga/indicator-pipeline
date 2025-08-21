@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.10.10-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
@@ -18,10 +18,16 @@ COPY pyproject.toml .
 COPY src ./src
 COPY README.md .
 
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
-RUN apt-get update && apt-get install -y build-essential python3-dev
+RUN apt-get update && apt-get install -y \
+    git \
+    build-essential \
+    python3-dev \
+    libdatrie-dev \
+    libglib2.0-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --upgrade pip setuptools wheel
+RUN python -m pip install --upgrade pip setuptools wheel
+
 RUN pip install .
 
 CMD ["--help"]
