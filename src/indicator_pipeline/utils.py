@@ -96,3 +96,29 @@ def get_log_dir() -> Path:
     log_dir = Path(os.environ.get("LOG_OUTPUT_PATH", "logs"))
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir
+
+
+def load_slf_usage() -> Dict[str, Dict[str, bool]]:
+    """
+    Load the tracking file (slf_usage.json) that records the processing status
+    of SLF datasets.
+    """
+    log_dir: Path = get_log_dir()
+    slf_usage_path = log_dir / "slf_usage.json"
+
+    if slf_usage_path.exists():
+        with slf_usage_path.open("r") as f:
+            return json.load(f)
+    return {}
+
+
+def save_slf_usage(data: Dict[str, Dict[str, bool]]) -> None:
+    """
+    Saves the current state of slf_usage.json.
+    """
+    log_dir: Path = get_log_dir()
+    slf_usage_path = log_dir / "slf_usage.json"
+    slf_usage_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with slf_usage_path.open("w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
