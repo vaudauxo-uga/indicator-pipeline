@@ -1,10 +1,10 @@
 import logging
 import tempfile
 from pathlib import Path, PurePosixPath
-from typing import List
+from typing import List, Dict
 
 from indicator_pipeline.sftp_client import SFTPClient
-from indicator_pipeline.utils import parse_patient_and_visit, lowercase_extensions
+from indicator_pipeline.utils import parse_patient_and_visit, lowercase_extensions, load_slf_usage, save_slf_usage
 from sleeplab_converter.mars_database.convert import convert_dataset
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,25 @@ class SLFConversion:
         self.local_slf_output = local_slf_output
         self.remote_year_dir = remote_year_dir
         self.sftp_client = sftp_client
+
+    def add_slf_usage(self):
+        """
+        Update the SLF usage tracking file (slf_usage.json) with any new SLF datasets.
+        This method scans the local `slf_to_compute/<year>` directory to detect
+        newly converted SLF folders.
+        """
+        slf_usage: Dict[str, Dict[str, bool]] = load_slf_usage()
+
+        new_slf_dir = self.local_slf_output / "slf_to_compute" / self.remote_year_dir.name
+        new_slf_ids = [d.name for d in new_slf_dir.iterdir() if d.is_dir()]
+
+        for slf_id in new_slf_ids:
+            if slf_id not in slf_usage:
+                slf_usage[slf_id] = {"abosa": False}
+            else:
+                slf_usage[slf_id].setdefault("abosa", False)
+
+        save_slf_usage(slf_usage)
 
     def convert_folder_to_slf(self, year: str, patients: List[str]):
         """
@@ -79,6 +98,9 @@ class SLFConversion:
                 series=self.remote_year_dir.name,
                 ds_name="slf_to_compute",
             )
+
+        self.add_slf_usage()
+
         logger.info(f"[CONVERT] Finished conversion for {len(patients)} patient(s)")
 
     def upload_slf_folders_to_server(self):
