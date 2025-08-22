@@ -6,12 +6,11 @@ from typing import List, Set, Dict, Any
 
 import pandas as pd
 
-from indicator_pipeline.utils import get_repo_root, parse_patient_and_visit, try_parse_number
+from indicator_pipeline.utils import get_repo_root, parse_patient_and_visit, try_parse_number, get_log_dir, \
+    load_slf_usage, save_slf_usage
 
 logger = logging.getLogger(__name__)
-DEFAULT_LOG_DIR = Path(os.environ.get("LOG_OUTPUT_PATH", "logs"))
-DEFAULT_LOG_DIR.mkdir(parents=True, exist_ok=True)
-PROCESSED_PATH: Path = DEFAULT_LOG_DIR / "processed.json"
+PROCESSED_PATH: Path = get_log_dir() / "processed.json"
 
 
 def load_processed() -> Set[str]:
@@ -190,6 +189,8 @@ def excel_to_json() -> None:
     Processes abosa output Excel files and stores the data in JSON payloads.
     """
 
+    slf_usage: Dict[str, Dict[str, bool]] = load_slf_usage()
+
     custom_path: str = os.environ.get("ABOSA_OUTPUT_PATH")
     if custom_path:
         abosa_output: Path = Path(custom_path)
@@ -222,7 +223,14 @@ def excel_to_json() -> None:
         indicator_df: pd.DataFrame = get_excel_from_rel_path(folder, rel_path)
         payloads: List[Dict[str, Any]] = df_to_json_payloads(indicator_df)
 
-        output_dir: Path = DEFAULT_LOG_DIR / "json_dumps"
+        for payload in payloads:
+            slf_id = f"PA{payload['patient_id']}_V{payload['numero_visite']}"
+            print(f"slf_id: {slf_id}")
+            if slf_id not in slf_usage:
+                slf_usage[slf_id] = {}
+            slf_usage[slf_id]["abosa"] = True
+
+        output_dir: Path = get_log_dir() / "json_dumps"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         safe_filename = rel_path.replace("/", "__").replace("\\", "__") + ".json"
@@ -234,3 +242,4 @@ def excel_to_json() -> None:
         new_processed.add(rel_path)
 
     save_processed(new_processed)
+    save_slf_usage(slf_usage)

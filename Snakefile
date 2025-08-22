@@ -8,7 +8,7 @@ LOGS_DIR = Path(DESKTOP) / "indicator-pipeline" / "logs"
 ABOSA_OUTPUT = Path(DESKTOP) / "abosa-output"
 
 DEFAULT_YEAR = str(datetime.now().year)
-YEARS = config.get("years",DEFAULT_YEAR).split()
+YEARS = str(config.get("years",DEFAULT_YEAR)).split()
 
 
 def docker_path(p):
@@ -23,7 +23,7 @@ def docker_path(p):
 
 rule all:
     input:
-        "analysis_complete.done"
+        "cleanup.done"
 
 
 rule run_pipeline:
@@ -74,11 +74,64 @@ rule import_to_mars:
           indicator-pipeline run-pipeline --step import_to_mars
         """
 
+rule cleanup_slf:
+    input:
+        "analysis_complete.done",
+    output:
+        touch("cleanup.done")
+    run:
+        import json
+        from pathlib import Path
+        import shutil
+
+        slf_usage_file = LOGS_DIR / "slf_usage.json"
+        slf_dir = SLF_OUTPUT / "slf_to_compute"
+
+        with open(slf_usage_file) as f:
+            slf_usage = json.load(f)
+
+        cleaned = []
+        skipped = []
+
+        for sample, indicators in slf_usage.items():
+            if all(indicators.values()):
+                sample_files = list(slf_dir.glob(f"*/{sample}*"))
+                if not sample_files:
+                    skipped.append(sample)
+                    continue
+                for f in sample_files:
+                    try:
+                        if f.is_file():
+                            f.unlink()
+                        elif f.is_dir():
+                            shutil.rmtree(f)
+                        cleaned.append(str(f))
+                    except Exception as e:
+                        print(f"⚠️ Erreur suppression {f}: {e}")
+            else:
+                skipped.append(sample)
+
+        if cleaned:
+            print("✅ Fichiers supprimés :")
+            for f in cleaned:
+                print("  -",f)
+
+        if skipped:
+            print("⏩ Non supprimés (indicateurs incomplets) :")
+            for s in skipped:
+                print("  -",s)
+
+
 rule clean:
     run:
         import os
 
-        for f in ["slf_conversion.done", "analysis_complete.done", "abosa_complete.flag"]:
+        for f in [
+            "slf_conversion.done",
+            "analysis_complete.done",
+            "cleanup.done",
+            "abosa_complete.flag"
+        ]:
             try:
                 os.remove(f)
                 print(f"Supprimé : {f}")
