@@ -23,7 +23,7 @@ def docker_path(p):
 
 rule all:
     input:
-        "analysis_complete.done"
+        "cleanup.done"
 
 
 rule run_pipeline:
@@ -73,6 +73,54 @@ rule import_to_mars:
           -v {params.abosa_output}:/abosa-output \
           indicator-pipeline run-pipeline --step import_to_mars
         """
+
+rule cleanup_slf:
+    input:
+        "analysis_complete.done",
+    output:
+        touch("cleanup.done")
+    run:
+        import json
+        from pathlib import Path
+        import shutil
+
+        slf_usage_file = LOGS_DIR / "slf_usage.json"
+        slf_dir = SLF_OUTPUT / "slf_to_compute"
+
+        with open(slf_usage_file) as f:
+            slf_usage = json.load(f)
+
+        cleaned = []
+        skipped = []
+
+        for sample, indicators in slf_usage.items():
+            if all(indicators.values()):
+                sample_files = list(slf_dir.glob(f"*/{sample}*"))
+                if not sample_files:
+                    skipped.append(sample)
+                    continue
+                for f in sample_files:
+                    try:
+                        if f.is_file():
+                            f.unlink()
+                        elif f.is_dir():
+                            shutil.rmtree(f)
+                        cleaned.append(str(f))
+                    except Exception as e:
+                        print(f"⚠️ Erreur suppression {f}: {e}")
+            else:
+                skipped.append(sample)
+
+        if cleaned:
+            print("✅ Fichiers supprimés :")
+            for f in cleaned:
+                print("  -",f)
+
+        if skipped:
+            print("⏩ Non supprimés (indicateurs incomplets) :")
+            for s in skipped:
+                print("  -",s)
+
 
 rule clean:
     run:
