@@ -126,7 +126,12 @@ rule clean:
     run:
         import os
 
-        for f in ["slf_conversion.done", "analysis_complete.done", "abosa_complete.flag"]:
+        for f in [
+            "slf_conversion.done",
+            "analysis_complete.done",
+            "cleanup.done",
+            "abosa_complete.flag"
+        ]:
             try:
                 os.remove(f)
                 print(f"Supprimé : {f}")
