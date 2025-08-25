@@ -39,6 +39,7 @@
     - en **local**, dans le dossier `slf-output`, situé un niveau au-dessus de la racine du projet
 - **Lancement manuel d’ABOSA** *(hors pipeline)* : les fichiers convertis doivent être ouverts et analysés **manuellement** dans le logiciel ABOSA afin d’y calculer les indicateurs d’oxymétrie. Le logiciel génère en sortie plusieurs dossiers, chacun contenant un ou plusieurs fichiers Excel. Ces fichiers regroupent les indicateurs extraits, ainsi que des métadonnées sur les enregistrements analysés.
 - **Import dans MARS** : les résultats générés par ABOSA sont sous forme de fichiers Excel. Les indicateurs conservés sont dans le fichier *ParameterValues*. Ils sont intégrés dans les tables appropriées de la base de données MARS, à partir d’une méthode POST qui envoie ces données à une API sous forme de payloads *json*.
+- **Suppression des fichiers slf stockés localement** : les fichiers slf générés lors de la conversion et stockés localement sont automatiquement supprimés du répertoire local lorsque tous les indicateurs ont été calculés, afin d’éviter l’accumulation de données inutiles.
 
 ![*Schéma du pipeline*](indicator_pipeline_diagram.png)
 
@@ -73,7 +74,12 @@
 
 ```markdown
 indicator-pipeline/
+├── docs/
 ├── logs/
+│		├── processed.json
+│		├── slf_usage.json
+│		├── pipeline_xxxx.log
+│		├── warning_and_errors_xxxx.log
 ├── src/
 │   ├── indicator_pipeline/
 │   │   ├── __init__.py
@@ -101,7 +107,8 @@ indicator-pipeline/
 └── README.md
 ```
 
-- `logs/` – Emplacement des fichiers de logs générés.
+- `docs/` - Emplacement des fichiers de documentation (md, images) en français et en anglais.
+- `logs/` – Emplacement des fichiers de logs générés et des fichiers de suivi (`processed.json`, `slf_usage.json`).
 - `src/`
     - `indicator_pipeline/`
         - Contient les scripts principaux du pipeline : module principal `run_pipeline`, connexion au serveur sftp `sftp_client`, conversion des psg en .slf `slf_conversion`, dump des données ABOSA en excel dans un payload json `excel_to_json`, la configuration du logger `logging_config`, et fonctions `utils`.
@@ -207,15 +214,16 @@ Cette séparation est **gérée automatiquement** dans l’exécution via Snakem
     
 - L'argument `--config years="2024 2025"` permet de spécifier les années à traiter lors de l'exécution du pipeline. Si aucune année n'est précisée, **l'année en cours est utilisée par défaut**.
 - Cette méthode garantit une **exécution modulaire, traçable et reproductible** des différentes étapes.
-- L’exécution complète suit trois règles :
+- L’exécution complète suit quatre règles :
     1. `run_pipeline` : convertit les fichiers PSG au format *slf*
     2. `wait_for_manual_step` : étape manuelle via ABOSA (*cf. Calcul des indicateurs avec ABOSA*)
     3. `import_to_mars` : envoie les résultats dans la base MARS
+    4. `cleanup_slf` : supprime les fichiers _slf_ stockés localement qui ont déjà été utilisés pour le calcul des indicateurs. La règle parcourt tous les sous-dossiers de `slf-output/slf_to_compute` (ex. `2020`, `2021`, …). Pour chaque sample, elle vérifie si tous les indicateurs sont à _True_. Si c’est le cas, tous les fichiers ou dossiers correspondants (`slf_<sample>*`) sont supprimés. Les fichiers ou samples incomplets restent intacts.
 - **Fichiers de synchronisation** (`.done`, `.flag`)
     - `slf_conversion.done` : marque la fin de l’étape de conversion (`run_pipeline`)
     - `abosa_complete.flag` : fichier **à créer manuellement** après l’analyse ABOSA pour continuer l’exécution. Un fichier `create_flag.bat` est disponible dans le répertoire pour créer ce fichier.
     - `analysis_complete.done` : marque la fin de l’import dans MARS (`import_to_mars`)
-    
+    - `cleanup.done` : indique que les fichiers slf stockés en local déjà utilisés ont été supprimés
     Ces fichiers servent de **marqueurs d’étape** permettant à Snakemake de suivre l’avancement du pipeline. Ils sont créés ou vérifiés automatiquement par les règles, et peuvent être supprimés avec la commande lorsque tout le pipeline a été exécuté :
     
     ```bash
@@ -223,7 +231,10 @@ Cette séparation est **gérée automatiquement** dans l’exécution via Snakem
     ```
     
 
-📝 **Remarque** : les chemins par défaut du Snakefile pointent vers le **Bureau de l’utilisateur** (`~/Desktop`). Si le projet est exécuté depuis un autre emplacement, il faudra **adapter les chemins définis dans le `Snakefile` (variables `SLF_OUTPUT`, `LOGS_DIR`, etc.)** en conséquence.
+📝 **Remarques** : 
+
+- Les chemins par défaut du Snakefile pointent vers le **Bureau de l’utilisateur** (`~/Desktop`). Si le projet est exécuté depuis un autre emplacement, il faudra **adapter les chemins définis dans le `Snakefile` (variables `SLF_OUTPUT`, `LOGS_DIR`, etc.)** en conséquence.
+- La règle `cleanup_slf` fonctionne même si plusieurs années sont traitées en parallèle, en parcourant tous les sous-dossiers de `slf_to_compute`.
 
 ## 🧪 Option 2 – Exécution manuelle (script principal)
 
@@ -351,7 +362,11 @@ Ce module contient la classe `SLFConversion`, qui centralise la logique de conve
     - `sftp_client (SFTPClient)` : Client SFTP actif permettant l'accès aux fichiers distants.
     
     **Méthodes**
-    
+
+    - `add_slf_usage()`
+
+        Met à jour le fichier de suivi des *slf* convertis (`slf_usage.json`) avec tous les nouveaux ensembles de données *slf*. Cette méthode analyse le répertoire local `slf_to_compute/<année>` afin de détecter les nouveaux dossiers SLF convertis.
+
     - `convert_folder_to_slf(local_slf_output: Path, year_dir: PurePosixPath, sftp_client: SFTPClient)`
         
         Télécharge tous les dossiers de patients pour une année donnée depuis un serveur SFTP dans un dossier temporaire local, ignorant ceux ayant déjà une sortie *slf*  existante. Les autres dossiers sont convertis au format *slf*  grâce au convertisseur `sleeplab-converter` (via la méthode `convert_dataset`).
@@ -360,7 +375,14 @@ Ce module contient la classe `SLFConversion`, qui centralise la logique de conve
     - `upload_slf_folders_to_server(local_slf_output: Path, remote_year_dir: PurePosixPath, sftp_client: SFTPClient)`
         
         Téléverse tous les dossiers *slf* générés localement vers le répertoire distant correspondant à l’année et au numéro de patient, sur le serveur SFTP. Effectue une vérification de cohérence entre les noms de dossiers *slf* et les identifiants présents dans les fichiers *.edf* distants pour éviter toute erreur d’association.
-        
+    
+    - `load_slf_usage(): Dict[str, Dict[str, bool]]`
+    
+        Charge le fichier de suivi `slf_usage.json` qui enregistre l'état de traitement des ensembles de données *slf*.
+    
+    - `save_slf_usage(data: Dict[str, Dict[str, bool]]): None`
+    
+        Enregistre le fichier de suivi `slf_usage.json`.  
 
 ### Package `sleeplab_converter`
 
