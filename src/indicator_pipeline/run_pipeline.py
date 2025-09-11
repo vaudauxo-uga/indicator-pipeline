@@ -80,7 +80,7 @@ def main():
             slf_converter: SLFConversion = SLFConversion(
                 local_slf_output, server_year_dir, sftp
             )
-            slf_converter.convert_folder_to_slf(year, patients)
+            slf_converter.convert_folder_to_slf(patients)
             slf_converter.upload_slf_folders_to_server()
 
         sftp.close()

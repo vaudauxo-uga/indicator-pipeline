@@ -50,7 +50,7 @@ class SLFConversion:
 
         save_slf_usage(slf_usage)
 
-    def convert_folder_to_slf(self, year: str, patients: List[str]):
+    def convert_folder_to_slf(self, patients: List[str]):
         """
         Downloads all patient folders for a given year from a remote SFTP server in a temporary folder,
         skips those that already contain an SLF output folder,
