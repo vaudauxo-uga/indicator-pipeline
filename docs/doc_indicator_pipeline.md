@@ -47,7 +47,7 @@
 
 # 🔧 Stack technique
 
-- **Langage principal** : Python 3.10+
+- **Langage principal** : Python 3.10.10
 - **Structure du projet** : Organisation modulaire sous `src/` avec deux packages :
     - `indicator_pipeline` : gestion des connexions, conversions, interactions DB
     - `sleeplab_converter` : conversion des données PSG au format sleeplab
