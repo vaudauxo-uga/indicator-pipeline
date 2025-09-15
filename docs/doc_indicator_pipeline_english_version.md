@@ -527,4 +527,4 @@ It also keeps track of already processed files to avoid duplicates.
 # 📚 Resources and appendices
 
 - `README.md` – global documentation
-- `LICENSE.txt` – [**sleeplab-converter-mars](https://github.com/HP2-data/sleeplab-converter-mars)** licence
+- `LICENSE.txt` – [**sleeplab-converter-mars**](https://github.com/HP2-data/sleeplab-converter-mars) licence
