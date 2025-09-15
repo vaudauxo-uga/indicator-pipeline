@@ -111,6 +111,9 @@ class SLFConversion:
                     for f in remote_files
                     if f.lower().endswith(valid_exts) and "T1-" in f and any(visit in f for visit in missing_visits)
                 ]
+                if not files_to_download:
+                    logger.info(f"[SKIP] No valid T1 files to download for patient {patient_id}")
+                    continue
 
                 for f in files_to_download:
                     remote_file_path = remote_patient_path / f
@@ -122,10 +125,7 @@ class SLFConversion:
                 downloaded_count += 1
 
             if downloaded_count > 0:
-                logger.info(
-                    f"[SUMMARY] Downloaded {downloaded_count} patient(s). Starting conversion..."
-                )
-
+                logger.info(f"[CONVERT] Starting conversion for {downloaded_count} patient(s)")
                 convert_dataset(
                     input_dir=tmp_root_path,
                     output_dir=self.local_slf_output,
@@ -134,7 +134,6 @@ class SLFConversion:
                 )
 
                 self.add_slf_usage()
-
                 logger.info(f"[CONVERT] Finished conversion for {downloaded_count} patient(s)")
 
     def upload_slf_folders_to_server(self):
@@ -147,7 +146,7 @@ class SLFConversion:
                 self.local_slf_output / "slf_to_compute" / self.remote_year_dir.name
         )
         if not local_year_dir.exists():
-            logger.warning(f"Local year directory not found: {local_year_dir}")
+            logger.warning(f"[WARNING] Local year directory not found: {local_year_dir}")
             return
 
         for patient_folder in local_year_dir.iterdir():
@@ -170,7 +169,7 @@ class SLFConversion:
                 )
             except Exception as e:
                 logger.warning(
-                    f"[SKIP] Unable to list remote files for {remote_raw_dir}: {e}"
+                    f"[WARNING] Unable to list remote files for {remote_raw_dir}: {e}"
                 )
                 continue
 
@@ -186,7 +185,7 @@ class SLFConversion:
                         and expected_patient_id != folder_patient_id.replace("PA", "")
                 ):
                     logger.warning(
-                        f"[SKIP] Inconsistent patient ID: folder = {folder_patient_id}, "
+                        f"[WARNING] Inconsistent patient ID: folder = {folder_patient_id}, "
                         f"EDF = {edf} (expected = {expected_patient_id})"
                     )
                     inconsistent = True
@@ -199,7 +198,7 @@ class SLFConversion:
                 expected_name = f"{folder_patient_id}_{visit}"
                 local_visit_folder = local_year_dir / expected_name
                 if not local_visit_folder.exists():
-                    logger.warning(f"[SKIP] Missing local folder {expected_name}")
+                    logger.warning(f"[WARNING] Missing local folder {expected_name}")
                     continue
 
                 slf_remote_name = f"slf_{local_visit_folder.name}"
