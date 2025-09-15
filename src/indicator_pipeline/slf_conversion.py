@@ -1,7 +1,7 @@
 import logging
 import tempfile
 from pathlib import Path, PurePosixPath
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Set
 
 from indicator_pipeline.sftp_client import SFTPClient
 from indicator_pipeline.utils import parse_patient_and_visit, lowercase_extensions, load_slf_usage, save_slf_usage, \
@@ -95,12 +95,21 @@ class SLFConversion:
                     logger.info(f"[PROCESS] Missing visits for {patient_id}: {missing_visits}")
 
                 local_patient_dir: Path = local_year_dir / patient_id
-                self.sftp_client.download_folder_recursive(
-                    str(remote_patient_path), local_patient_dir
-                )
-                logger.info(
-                    f"[COPY] Copied patient {patient_id} locally to {local_patient_dir}"
-                )
+                remote_files: List[str] = self.sftp_client.list_files(str(remote_patient_path))
+                valid_exts = (".edf", ".txt", ".rtf", ".csv")
+
+                files_to_download: List[str] = [
+                    f
+                    for f in remote_files
+                    if f.lower().endswith(valid_exts) and "T1-" in f and any(visit in f for visit in missing_visits)
+                ]
+
+                for f in files_to_download:
+                    remote_file_path = remote_patient_path / f
+                    local_file_path = local_patient_dir / f
+                    self.sftp_client.download_file(str(remote_file_path), local_file_path)
+
+                logger.info(f"[COPY] Copied missing visits {missing_visits} locally to {local_patient_dir}")
                 lowercase_extensions(local_patient_dir)
                 downloaded_count += 1
 
