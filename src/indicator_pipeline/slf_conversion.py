@@ -157,7 +157,7 @@ class SLFConversion:
             folder_patient_id: str = patient_folder.name.split("_")[0]
 
             remote_raw_dir: PurePosixPath = self.remote_year_dir / folder_patient_id
-            all_psg_converted, missing_visits = self.check_patient_visits(remote_raw_dir)
+            all_psg_converted, missing_visits, _ = self.check_patient_visits(remote_raw_dir)
             if all_psg_converted:
                 logger.info(f"[SKIP] All SLF already exist for {folder_patient_id}")
                 continue
