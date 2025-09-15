@@ -355,7 +355,9 @@ Utility class to establish an SFTP connection and transfer files or folders betw
 
 ### Module `slf_conversion.py`
 
-This module contains the `SLFConversion` class, which centralizes the logic for converting polysomnography recordings to the *slf* format (using the `sleeplab-converter` tool) and uploading them to a remote SFTP server.
+This module contains the `SLFConversion` class, which centralizes the logic for **converting polysomnography recordings to the *slf* format** (using the `sleeplab-converter` tool) and uploading them to a remote SFTP server.
+
+During conversion and upload, the SLFConversion class systematically avoids reprocessing visits that have already been converted so as not to duplicate existing SLFs. It also ignores non-compliant files (e.g., files whose names do not comply with the format required for PSG T1), thus ensuring that only valid and relevant data is downloaded, converted, and uploaded. This approach optimizes processing time and maintains data consistency on the server.
 
 - **Class `SLFConversion`**
     
@@ -374,10 +376,13 @@ This module contains the `SLFConversion` class, which centralizes the logic for 
     
         Updates the *slf* usage tracking file (`slf_usage.json`) with any new SLF datasets. This method scans the local `slf_to_compute/<year>` directory to detect newly converted *slf* folders.
 
-    - `check_patient_visits(remote_patient_path: PurePosixPath): Tuple[bool, List[str]]`
+    - `check_patient_visits(remote_patient_path: PurePosixPath): Tuple[bool, List[str], bool]`
     
-        Checks whether all T1 visits for a patient already have an associated slf file. Returns True if `all_psg_converted`, and the list of `all missing_visits`.
-
+        Checks whether all T1 visits for a patient already have an associated _slf_ folder. Returns:
+            - `all_psg_converted: bool` => if all T1 visits have an associated _slf_ folder
+            - `missing_visits: List[str]` => list of visits (e.g., ["V1", "V2"]) without _slf_
+            - `has_valid_psg: bool` => if the patient folder has at least one valid T1 visits to convert
+    
     - `convert_folder_to_slf(local_slf_output: Path, year_dir: PurePosixPath, sftp_client: SFTPClient)`
         
         Downloads all patient folders for a given year from the SFTP server into a temporary local folder, skipping those that already have *slf* outputs. Other folders are converted to the *slf* format using the `sleeplab-converter` via the `convert_dataset` method.
