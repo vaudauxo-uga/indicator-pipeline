@@ -121,20 +121,21 @@ class SLFConversion:
                 lowercase_extensions(local_patient_dir)
                 downloaded_count += 1
 
-            logger.info(
-                f"[SUMMARY] Downloaded {downloaded_count} patient(s). Starting conversion..."
-            )
+            if downloaded_count > 0:
+                logger.info(
+                    f"[SUMMARY] Downloaded {downloaded_count} patient(s). Starting conversion..."
+                )
 
-            convert_dataset(
-                input_dir=tmp_root_path,
-                output_dir=self.local_slf_output,
-                series=self.remote_year_dir.name,
-                ds_name="slf_to_compute",
-            )
+                convert_dataset(
+                    input_dir=tmp_root_path,
+                    output_dir=self.local_slf_output,
+                    series=self.remote_year_dir.name,
+                    ds_name="slf_to_compute",
+                )
 
-        self.add_slf_usage()
+                self.add_slf_usage()
 
-        logger.info(f"[CONVERT] Finished conversion for {downloaded_count} patient(s)")
+                logger.info(f"[CONVERT] Finished conversion for {downloaded_count} patient(s)")
 
     def upload_slf_folders_to_server(self):
         """
