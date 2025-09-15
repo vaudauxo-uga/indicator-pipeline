@@ -51,24 +51,27 @@ class SLFConversion:
 
         save_slf_usage(slf_usage)
 
-    def check_patient_visits(self, remote_patient_path: PurePosixPath) -> Tuple[bool, List[str]]:
+    def check_patient_visits(self, remote_patient_path: PurePosixPath) -> Tuple[bool, List[str], bool]:
         """
-        Checks whether all T1 visits for a patient already have an associated slf file.
-        Returns (all_psg_converted, missing_visits).
+        Checks whether all T1 visits for a patient already have an associated slf folder.
+        Returns :
+            - all_psg_converted: bool => if all T1 visits have an associated slf folder
+            - missing_visits: List[str] => list of visits (e.g., ["V1", "V2"]) without slf
+            - has_valid_psg: bool => if the patient folder has at least one valid T1 visits to convert
         """
-        existing_files = self.sftp_client.list_files(str(remote_patient_path))
+        existing_files: List[str] = self.sftp_client.list_files(str(remote_patient_path))
         expected_visits: List[str] = extract_visits(existing_files)
         slf_folders: List[str] = [name for name in existing_files if name.startswith("slf_")]
+
+        if not expected_visits:
+            return True, expected_visits, False
 
         missing_visits: List[str] = []
         for visit in expected_visits:
             if not any(visit in slf for slf in slf_folders):
                 missing_visits.append(visit)
 
-        if missing_visits:
-            return False, missing_visits
-        else:
-            return True, []
+        return len(missing_visits) == 0, missing_visits, True
 
     def convert_folder_to_slf(self, patients: List[str]):
         """
@@ -87,7 +90,12 @@ class SLFConversion:
             downloaded_count: int = 0
             for patient_id in patients:
                 remote_patient_path: PurePosixPath = self.remote_year_dir / patient_id
-                all_psg_converted, missing_visits = self.check_patient_visits(remote_patient_path)
+                all_psg_converted, missing_visits, has_valid_psg = self.check_patient_visits(remote_patient_path)
+
+                if not has_valid_psg:
+                    logger.info(f"[SKIP] No valid T1 PSG found for {patient_id}")
+                    continue
+
                 if all_psg_converted:
                     logger.info(f"[SKIP] All SLF already exist for {patient_id}")
                     continue
@@ -126,7 +134,7 @@ class SLFConversion:
 
         self.add_slf_usage()
 
-        logger.info(f"[CONVERT] Finished conversion for {len(patients)} patient(s)")
+        logger.info(f"[CONVERT] Finished conversion for {downloaded_count} patient(s)")
 
     def upload_slf_folders_to_server(self):
         """
