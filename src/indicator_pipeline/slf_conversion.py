@@ -137,21 +137,14 @@ class SLFConversion:
                 continue
 
             folder_patient_id: str = patient_folder.name.split("_")[0]
-            slf_remote_name: str = f"slf_{patient_folder.name}"
-            remote_patient_dir: PurePosixPath = (
-                    self.remote_year_dir / folder_patient_id / slf_remote_name
-            )
 
             remote_raw_dir: PurePosixPath = self.remote_year_dir / folder_patient_id
-            existing_folders = self.sftp_client.list_files(str(remote_raw_dir))
-            slf_folders: List[str] = [
-                name
-                for name in existing_folders
-                if name.startswith(f"slf_{patient_folder.stem}")
-            ]
-            if slf_folders:
-                logger.info(f"[SKIP] SLF already exists")
+            all_psg_converted, missing_visits = self.check_patient_visits(remote_raw_dir)
+            if all_psg_converted:
+                logger.info(f"[SKIP] All SLF already exist for {folder_patient_id}")
                 continue
+            else:
+                logger.info(f"[UPLOAD] Missing SLF for visits: {missing_visits}")
 
             try:
                 remote_files: List[str] = self.sftp_client.list_files(
@@ -184,7 +177,17 @@ class SLFConversion:
             if inconsistent:
                 continue
 
-            logger.info(f"[UPLOAD] Uploading {patient_folder} to {remote_patient_dir}")
-            self.sftp_client.upload_folder_recursive(
-                patient_folder, str(remote_patient_dir)
-            )
+            for visit in missing_visits:
+                expected_name = f"{folder_patient_id}_{visit}"
+                local_visit_folder = local_year_dir / expected_name
+                if not local_visit_folder.exists():
+                    logger.warning(f"[SKIP] Missing local folder {expected_name}")
+                    continue
+
+                slf_remote_name = f"slf_{local_visit_folder.name}"
+                remote_visit_dir = self.remote_year_dir / folder_patient_id / slf_remote_name
+
+                logger.info(f"[UPLOAD] Uploading {local_visit_folder} to {remote_visit_dir}")
+                self.sftp_client.upload_folder_recursive(
+                    local_visit_folder, str(remote_visit_dir)
+                )
