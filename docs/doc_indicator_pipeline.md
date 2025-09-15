@@ -332,6 +332,10 @@ Classe utilitaire permettant d'établir une connexion SFTP et de transférer des
     - `download_folder_recursive(remote_path: str, local_path: Path)`
         
         Télécharge récursivement tout le contenu d’un dossier distant vers un répertoire local.
+  
+    - `download_file(remote_path: str, local_path: Path)`
+    
+        Télécharge un fichier donné depuis un serveur SFTP vers un chemin local.
         
     - `upload_folder_recursive(local_path: Path, remote_path: str)`
         
@@ -366,6 +370,10 @@ Ce module contient la classe `SLFConversion`, qui centralise la logique de conve
     - `add_slf_usage()`
 
         Met à jour le fichier de suivi des *slf* convertis (`slf_usage.json`) avec tous les nouveaux ensembles de données *slf*. Cette méthode analyse le répertoire local `slf_to_compute/<année>` afin de détecter les nouveaux dossiers SLF convertis.
+    
+    - `check_patient_visits(remote_patient_path: PurePosixPath): Tuple[bool, List[str]]`
+    
+        Vérifie si toutes les visites T1 d'un patient ont déjà un fichier slf associé. Renvoie True si `all_psg_converted`, et la liste de toutes les `missing_visits`.    
 
     - `convert_folder_to_slf(local_slf_output: Path, year_dir: PurePosixPath, sftp_client: SFTPClient)`
         
@@ -472,6 +480,10 @@ Ce module contient la classe `SLFConversion`, qui centralise la logique de conve
         
         Extrait l’identifiant patient et le numéro de visite à partir d’un chemin de fichier edf. Renvoie une chaîne de caractère de la forme “PAxxxx_Vx” (ou “PAxxxx” si pas de numéro de visite).
         
+    - `extract_visits(file_list: List[str]): List[str]`
+    
+        Extrait les visites (V1, V2, etc.) des noms de fichiers PSG T1. Déduplique automatiquement même si plusieurs enregistrements existent pour la même visite/nuit.
+
     - `try_parse_number(value, as_int: bool = False): Optional[Union[int, float]]`
         
         Convertit une chaîne de caractère en *int* ou *float* et remplace les virgules par des points pour gérer les formats décimaux européens. Retourne le nombre ou None si la conversion échoue.
