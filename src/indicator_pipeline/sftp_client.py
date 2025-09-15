@@ -16,13 +16,14 @@ class SFTPClient:
     for connecting, listing files, downloading and uploading individual files or entire folders
     recursively, and closing the connection.
     """
+
     def __init__(
-        self,
-        host: str,
-        user: str = "",
-        key_path: str = "",
-        password: str = "",
-        port: int = 22,
+            self,
+            host: str,
+            user: str = "",
+            key_path: str = "",
+            password: str = "",
+            port: int = 22,
     ):
         self.host = host
         self.user = user
@@ -66,6 +67,13 @@ class SFTPClient:
             return stat.S_ISDIR(self.sftp.stat(path).st_mode)
         except IOError:
             return False
+
+    def download_file(self, remote_path: str, local_path: Path):
+        """
+        Download a single file from remote SFTP server to local path.
+        """
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        self.sftp.get(remote_path, str(local_path))
 
     def download_folder_recursive(self, remote_path: str, local_path: Path):
         """

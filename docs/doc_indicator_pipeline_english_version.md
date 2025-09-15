@@ -49,7 +49,7 @@
 
 # 🔧 Technical Stack
 
-- **Main language**: Python 3.10+
+- **Main language**: Python 3.10.10
 - **Project structure**: Modular organization under `src/` with two packages:
     - `indicator_pipeline`: handles connections, conversions, and DB interactions
     - `sleeplab_converter`: converts PSG data to the *sleeplab* format
@@ -335,6 +335,10 @@ Utility class to establish an SFTP connection and transfer files or folders betw
     - `download_folder_recursive(remote_path: str, local_path: Path)`
         
         Recursively downloads the contents of a remote folder to a local directory.
+  
+    - `download_file(remote_path: str, local_path: Path)`
+    
+        Downloads a given single file from remote SFTP server to local path.
         
     - `upload_folder_recursive(local_path: Path, remote_path: str)`
         
@@ -369,6 +373,10 @@ This module contains the `SLFConversion` class, which centralizes the logic for 
     - `add_slf_usage()`
     
         Updates the *slf* usage tracking file (`slf_usage.json`) with any new SLF datasets. This method scans the local `slf_to_compute/<year>` directory to detect newly converted *slf* folders.
+
+    - `check_patient_visits(remote_patient_path: PurePosixPath): Tuple[bool, List[str]]`
+    
+        Checks whether all T1 visits for a patient already have an associated slf file. Returns True if `all_psg_converted`, and the list of `all missing_visits`.
 
     - `convert_folder_to_slf(local_slf_output: Path, year_dir: PurePosixPath, sftp_client: SFTPClient)`
         
@@ -471,6 +479,10 @@ It also keeps track of already processed files to avoid duplicates.
         
         Extracts the patient ID and visit number from an EDF file path. Returns a string in the format `"PAxxxx_Vx"` (or `"PAxxxx"` if no visit number is present).
         
+    - `extract_visits(file_list: List[str]): List[str]`
+    
+        Extracts visits (V1, V2, etc.) from PSG T1 file names. Automatically deduplicate even if multiple records exist for the same visit/night.
+
     - `try_parse_number(value, as_int: bool = False) -> Optional[Union[int, float]]`
         
         Converts a string to an *int* or *float*, replacing commas with dots to handle European decimal formats. Returns the number or `None` if conversion fails.
@@ -515,4 +527,4 @@ It also keeps track of already processed files to avoid duplicates.
 # 📚 Resources and appendices
 
 - `README.md` – global documentation
-- `LICENSE.txt` – [**sleeplab-converter-mars](https://github.com/HP2-data/sleeplab-converter-mars)** licence
+- `LICENSE.txt` – [**sleeplab-converter-mars**](https://github.com/HP2-data/sleeplab-converter-mars) licence
