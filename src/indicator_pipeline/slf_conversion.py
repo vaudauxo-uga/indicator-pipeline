@@ -51,24 +51,27 @@ class SLFConversion:
 
         save_slf_usage(slf_usage)
 
-    def check_patient_visits(self, remote_patient_path: PurePosixPath) -> Tuple[bool, List[str]]:
+    def check_patient_visits(self, remote_patient_path: PurePosixPath) -> Tuple[bool, List[str], bool]:
         """
-        Checks whether all T1 visits for a patient already have an associated slf file.
-        Returns (all_psg_converted, missing_visits).
+        Checks whether all T1 visits for a patient already have an associated slf folder.
+        Returns :
+            - all_psg_converted: bool => if all T1 visits have an associated slf folder
+            - missing_visits: List[str] => list of visits (e.g., ["V1", "V2"]) without slf
+            - has_valid_psg: bool => if the patient folder has at least one valid T1 visits to convert
         """
-        existing_files = self.sftp_client.list_files(str(remote_patient_path))
+        existing_files: List[str] = self.sftp_client.list_files(str(remote_patient_path))
         expected_visits: List[str] = extract_visits(existing_files)
         slf_folders: List[str] = [name for name in existing_files if name.startswith("slf_")]
+
+        if not expected_visits:
+            return True, expected_visits, False
 
         missing_visits: List[str] = []
         for visit in expected_visits:
             if not any(visit in slf for slf in slf_folders):
                 missing_visits.append(visit)
 
-        if missing_visits:
-            return False, missing_visits
-        else:
-            return True, []
+        return len(missing_visits) == 0, missing_visits, True
 
     def convert_folder_to_slf(self, patients: List[str]):
         """
@@ -87,7 +90,12 @@ class SLFConversion:
             downloaded_count: int = 0
             for patient_id in patients:
                 remote_patient_path: PurePosixPath = self.remote_year_dir / patient_id
-                all_psg_converted, missing_visits = self.check_patient_visits(remote_patient_path)
+                all_psg_converted, missing_visits, has_valid_psg = self.check_patient_visits(remote_patient_path)
+
+                if not has_valid_psg:
+                    logger.info(f"[SKIP] No valid T1 PSG found for {patient_id}")
+                    continue
+
                 if all_psg_converted:
                     logger.info(f"[SKIP] All SLF already exist for {patient_id}")
                     continue
@@ -103,6 +111,9 @@ class SLFConversion:
                     for f in remote_files
                     if f.lower().endswith(valid_exts) and "T1-" in f and any(visit in f for visit in missing_visits)
                 ]
+                if not files_to_download:
+                    logger.info(f"[SKIP] No valid T1 files to download for patient {patient_id}")
+                    continue
 
                 for f in files_to_download:
                     remote_file_path = remote_patient_path / f
@@ -113,20 +124,17 @@ class SLFConversion:
                 lowercase_extensions(local_patient_dir)
                 downloaded_count += 1
 
-            logger.info(
-                f"[SUMMARY] Downloaded {downloaded_count} patient(s). Starting conversion..."
-            )
+            if downloaded_count > 0:
+                logger.info(f"[CONVERT] Starting conversion for {downloaded_count} patient(s)")
+                convert_dataset(
+                    input_dir=tmp_root_path,
+                    output_dir=self.local_slf_output,
+                    series=self.remote_year_dir.name,
+                    ds_name="slf_to_compute",
+                )
 
-            convert_dataset(
-                input_dir=tmp_root_path,
-                output_dir=self.local_slf_output,
-                series=self.remote_year_dir.name,
-                ds_name="slf_to_compute",
-            )
-
-        self.add_slf_usage()
-
-        logger.info(f"[CONVERT] Finished conversion for {len(patients)} patient(s)")
+                self.add_slf_usage()
+                logger.info(f"[CONVERT] Finished conversion for {downloaded_count} patient(s)")
 
     def upload_slf_folders_to_server(self):
         """
@@ -138,7 +146,7 @@ class SLFConversion:
                 self.local_slf_output / "slf_to_compute" / self.remote_year_dir.name
         )
         if not local_year_dir.exists():
-            logger.warning(f"Local year directory not found: {local_year_dir}")
+            logger.warning(f"[WARNING] Local year directory not found: {local_year_dir}")
             return
 
         for patient_folder in local_year_dir.iterdir():
@@ -148,7 +156,7 @@ class SLFConversion:
             folder_patient_id: str = patient_folder.name.split("_")[0]
 
             remote_raw_dir: PurePosixPath = self.remote_year_dir / folder_patient_id
-            all_psg_converted, missing_visits = self.check_patient_visits(remote_raw_dir)
+            all_psg_converted, missing_visits, _ = self.check_patient_visits(remote_raw_dir)
             if all_psg_converted:
                 logger.info(f"[SKIP] All SLF already exist for {folder_patient_id}")
                 continue
@@ -161,7 +169,7 @@ class SLFConversion:
                 )
             except Exception as e:
                 logger.warning(
-                    f"[SKIP] Unable to list remote files for {remote_raw_dir}: {e}"
+                    f"[WARNING] Unable to list remote files for {remote_raw_dir}: {e}"
                 )
                 continue
 
@@ -177,7 +185,7 @@ class SLFConversion:
                         and expected_patient_id != folder_patient_id.replace("PA", "")
                 ):
                     logger.warning(
-                        f"[SKIP] Inconsistent patient ID: folder = {folder_patient_id}, "
+                        f"[WARNING] Inconsistent patient ID: folder = {folder_patient_id}, "
                         f"EDF = {edf} (expected = {expected_patient_id})"
                     )
                     inconsistent = True
@@ -190,7 +198,7 @@ class SLFConversion:
                 expected_name = f"{folder_patient_id}_{visit}"
                 local_visit_folder = local_year_dir / expected_name
                 if not local_visit_folder.exists():
-                    logger.warning(f"[SKIP] Missing local folder {expected_name}")
+                    logger.warning(f"[WARNING] Missing local folder {expected_name}")
                     continue
 
                 slf_remote_name = f"slf_{local_visit_folder.name}"

@@ -352,7 +352,9 @@ Classe utilitaire permettant d'établir une connexion SFTP et de transférer des
 
 ### Module `slf_conversion.py`
 
-Ce module contient la classe `SLFConversion`, qui centralise la logique de conversion des enregistrements de polysomnographie au format *slf* (via l’outil `sleeplab-converter`) ainsi que leur téléversement sur le serveur SFTP distant.
+Ce module contient la classe `SLFConversion`, qui centralise la logique de **conversion des enregistrements de polysomnographie au format *slf*** (via l’outil `sleeplab-converter`) ainsi que leur téléversement sur le serveur SFTP distant.
+
+Lors de la conversion et du téléversement, la classe `SLFConversion` évite systématiquement de retraiter les visites déjà converties afin de ne pas dupliquer les SLF existants. Elle ignore également les fichiers **non conformes** (par exemple des fichiers dont le nom ne respecte pas le format attendu pour les PSG T1), garantissant ainsi que seules les données valides et pertinentes soient téléchargées, converties et uploadées. Cette approche optimise le temps de traitement et maintient la cohérence des données sur le serveur.
 
 - **Classe `SLFConversion`**
     
@@ -371,9 +373,12 @@ Ce module contient la classe `SLFConversion`, qui centralise la logique de conve
 
         Met à jour le fichier de suivi des *slf* convertis (`slf_usage.json`) avec tous les nouveaux ensembles de données *slf*. Cette méthode analyse le répertoire local `slf_to_compute/<année>` afin de détecter les nouveaux dossiers SLF convertis.
     
-    - `check_patient_visits(remote_patient_path: PurePosixPath): Tuple[bool, List[str]]`
+    - `check_patient_visits(remote_patient_path: PurePosixPath): Tuple[bool, List[str], bool]`
     
-        Vérifie si toutes les visites T1 d'un patient ont déjà un fichier slf associé. Renvoie True si `all_psg_converted`, et la liste de toutes les `missing_visits`.    
+        Vérifie si toutes les visites T1 d'un patient ont déjà un fichier _slf_ associé. Renvoie:
+        - `all_psg_converted: bool` => Si toutes les visites T1 ont un dossier _slf_ associé
+        - `missing_visits: List[str]` => Liste des visites (ex: ["V1", "V2"]) sans dossier _slf_ associé
+        - `has_valid_psg: bool` => Si le dossier patient a au moins une visite T1 valide à convertir    
 
     - `convert_folder_to_slf(local_slf_output: Path, year_dir: PurePosixPath, sftp_client: SFTPClient)`
         
