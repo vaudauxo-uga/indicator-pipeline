@@ -310,7 +310,7 @@ def read_series(
         edf_list: List[Path] = list(edf_path.glob("*.edf"))
 
         if not edf_list:
-            logger.info(f"Skipping subject with no .edf file: {edf_path.stem}")
+            logger.warning(f"Skipping subject with no .edf file: {edf_path.stem}")
             error_counts["EDF_does_not_exist"] += 1
             continue
 
