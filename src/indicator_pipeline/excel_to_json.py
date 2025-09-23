@@ -200,8 +200,8 @@ def excel_to_json() -> None:
         abosa_output: Path = outside_repo_dir / "abosa-output"
 
     if not abosa_output.exists():
-        logger.error(f"Le dossier attendu n'existe pas : {abosa_output}")
-        raise FileNotFoundError(f"Le dossier abosa-output est manquant : {abosa_output}")
+        logger.error(f"The expected folder does not exist : {abosa_output}")
+        raise FileNotFoundError(f"The abosa-output folder is missing : {abosa_output}")
 
     processed: Set[str] = load_processed()
     new_processed: Set[str] = set(processed)
@@ -209,8 +209,8 @@ def excel_to_json() -> None:
     param_dirs: List[Path] = find_parameter_folders(abosa_output)
 
     if not param_dirs:
-        logger.error("Aucun dossier à traiter dans abosa-output")
-        raise RuntimeError("Aucun dossier à traiter dans abosa-output")
+        logger.error("No folders to process in abosa-output")
+        raise RuntimeError("No folders to process in abosa-output")
 
     for folder in param_dirs:
         rel_path: str = str(folder.relative_to(abosa_output))
