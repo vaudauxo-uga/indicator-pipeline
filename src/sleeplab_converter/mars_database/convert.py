@@ -362,7 +362,7 @@ def read_series(
                     )
             except Exception as e:
                 logger.warning(
-                    f"Skipping subject {edf_path.stem} due to error in annotation parsing:"
+                    f"[SKIP] Skipping subject {edf_path.stem} due to error in annotation parsing:"
                 )
                 logger.warning(e)
                 error_counts["annot_parse_error"] += 1
