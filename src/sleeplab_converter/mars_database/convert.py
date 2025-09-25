@@ -316,7 +316,7 @@ def read_series(
 
         logger.info(f"Start parsing subject {edf_path.name}")
 
-        for edf_file in edf_list:  # loop through the edf files
+        for edf_file in edf_list:
             if (
                 "T1-" not in edf_file.name
             ):  # edf needs to be PSG recording (12 and 13 are MSLT and MWT recordings)
@@ -326,7 +326,7 @@ def read_series(
                 start_ts, sample_arrays, header = parse_edf(edf_file)
             except Exception as e:
                 logger.warning(
-                    f"Skipping subject {edf_path.stem} and file {edf_file} due to error in EDF parsing:"
+                    f"[SKIP] Skipping subject {edf_path.stem} and file {edf_file} due to error in EDF parsing:"
                 )
                 logger.warning(e)
                 error_counts["edf_reader_not_working"] += 1
