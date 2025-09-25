@@ -310,13 +310,13 @@ def read_series(
         edf_list: List[Path] = list(edf_path.glob("*.edf"))
 
         if not edf_list:
-            logger.info(f"Skipping subject with no .edf file: {edf_path.stem}")
+            logger.warning(f"Skipping subject with no .edf file: {edf_path.stem}")
             error_counts["EDF_does_not_exist"] += 1
             continue
 
         logger.info(f"Start parsing subject {edf_path.name}")
 
-        for edf_file in edf_list:  # loop through the edf files
+        for edf_file in edf_list:
             if (
                 "T1-" not in edf_file.name
             ):  # edf needs to be PSG recording (12 and 13 are MSLT and MWT recordings)
@@ -326,7 +326,7 @@ def read_series(
                 start_ts, sample_arrays, header = parse_edf(edf_file)
             except Exception as e:
                 logger.warning(
-                    f"Skipping subject {edf_path.stem} and file {edf_file} due to error in EDF parsing:"
+                    f"[SKIP] Skipping subject {edf_path.stem} and file {edf_file} due to error in EDF parsing:"
                 )
                 logger.warning(e)
                 error_counts["edf_reader_not_working"] += 1
@@ -362,7 +362,7 @@ def read_series(
                     )
             except Exception as e:
                 logger.warning(
-                    f"Skipping subject {edf_path.stem} due to error in annotation parsing:"
+                    f"[SKIP] Skipping subject {edf_path.stem} due to error in annotation parsing:"
                 )
                 logger.warning(e)
                 error_counts["annot_parse_error"] += 1

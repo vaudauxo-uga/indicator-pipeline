@@ -101,7 +101,7 @@ Snakemake will:
 Snakemake uses flag files to manage execution state:
 
 - `step1.done`: Marks completion of the SLF conversion
-- `manual_ready.flag`: Created manually after ABOSA is run
+- `manual_ready.flag`: Created manually after ABOSA is run (the file `create_flag.bat` allows to create this file)
 - `step2.done`: Marks successful import to the MARS database
 
 After the execution of the whole pipeline, these control files can be deleted by launching:

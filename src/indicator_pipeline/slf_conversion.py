@@ -93,7 +93,7 @@ class SLFConversion:
                 all_psg_converted, missing_visits, has_valid_psg = self.check_patient_visits(remote_patient_path)
 
                 if not has_valid_psg:
-                    logger.info(f"[SKIP] No valid T1 PSG found for {patient_id}")
+                    logger.warning(f"[SKIP] No valid T1 PSG found for {patient_id}")
                     continue
 
                 if all_psg_converted:
@@ -112,7 +112,7 @@ class SLFConversion:
                     if f.lower().endswith(valid_exts) and "T1-" in f and any(visit in f for visit in missing_visits)
                 ]
                 if not files_to_download:
-                    logger.info(f"[SKIP] No valid T1 files to download for patient {patient_id}")
+                    logger.warning(f"[SKIP] No valid T1 files to download for patient {patient_id}")
                     continue
 
                 for f in files_to_download:
