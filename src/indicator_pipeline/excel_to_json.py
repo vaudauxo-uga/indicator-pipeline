@@ -112,6 +112,7 @@ def df_to_json_payloads(df: pd.DataFrame) -> List[Dict[str, Any]]:
             "recovery": extract(
                 row,
                 [
+                    "RI",
                     "RecSev",
                     "RecSev100",
                     "RecDur",
