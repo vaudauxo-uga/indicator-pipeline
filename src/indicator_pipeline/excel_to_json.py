@@ -83,6 +83,7 @@ def df_to_json_payloads(df: pd.DataFrame) -> List[Dict[str, Any]]:
         payload: Dict[str, Any] = {
             "patient_id": try_parse_number(patient_id, as_int=True),
             "numero_visite": try_parse_number(numero_visite, as_int=True),
+            "recording_conditions": "",
             "TST": try_parse_number(row.get("TST")),
             "n_desat": try_parse_number(row.get("n_desat"), as_int=True),
             "n_reco": try_parse_number(row.get("n_reco"), as_int=True),
