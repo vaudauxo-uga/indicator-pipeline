@@ -6,6 +6,8 @@ from typing import List, Set, Dict, Any
 
 import pandas as pd
 
+from indicator_pipeline.excel_mapping import DESATURATION_MAP, RECOVERY_MAP, RATIOS_MAP, SEVERITY_MAP, SPO2_MAP, \
+    TIME_BELOW_THRESHOLDS_MAP
 from indicator_pipeline.utils import get_repo_root, parse_patient_and_visit, try_parse_number, get_log_dir, \
     load_slf_usage, save_slf_usage
 
@@ -67,8 +69,11 @@ def df_to_json_payloads(df: pd.DataFrame) -> List[Dict[str, Any]]:
     Convert each row of an Excel DataFrame into a compliant JSON payload.
     """
 
-    def extract(patient_row, keys: List[str]) -> Dict[str, Any]:
-        return {key: try_parse_number(patient_row.get(key)) for key in keys}
+    def extract(patient_row, mapping: Dict[str, str]) -> Dict[str, Any]:
+        return {
+            new_key: try_parse_number(patient_row.get(old_key))
+            for old_key, new_key in mapping.items()
+        }
 
     payloads: List[Dict[str, Any]] = []
 
@@ -84,102 +89,16 @@ def df_to_json_payloads(df: pd.DataFrame) -> List[Dict[str, Any]]:
             "patient_id": try_parse_number(patient_id, as_int=True),
             "numero_visite": try_parse_number(numero_visite, as_int=True),
             "recording_condition": "",
-            "TST": try_parse_number(row.get("TST")),
+            "tst": try_parse_number(row.get("TST")),
             "n_desat": try_parse_number(row.get("n_desat"), as_int=True),
             "n_reco": try_parse_number(row.get("n_reco"), as_int=True),
-            "ODI": try_parse_number(row.get("ODI")),
-            "desaturation": extract(
-                row,
-                [
-                    "DesSev",
-                    "DesSev100",
-                    "DesDur",
-                    "avg_des_dur",
-                    "avg_des_area",
-                    "avg_des_area100",
-                    "avg_des_slope",
-                    "avg_des_depth",
-                    "avg_des_max",
-                    "avg_des_nadir",
-                    "med_des_dur",
-                    "med_des_area",
-                    "med_des_area100",
-                    "med_des_slope",
-                    "med_des_depth",
-                    "med_des_max",
-                    "med_des_nadir",
-                ],
-            ),
-            "recovery": extract(
-                row,
-                [
-                    "RI",
-                    "RecSev",
-                    "RecSev100",
-                    "RecDur",
-                    "avg_reco_dur",
-                    "avg_reco_area",
-                    "avg_reco_area100",
-                    "avg_reco_slope",
-                    "avg_reco_depth",
-                    "avg_reco_max",
-                    "avg_reco_nadir",
-                    "med_reco_dur",
-                    "med_reco_area",
-                    "med_reco_area100",
-                    "med_reco_slope",
-                    "med_reco_depth",
-                    "med_reco_max",
-                    "med_reco_nadir",
-                ],
-            ),
-            "ratios": extract(
-                row,
-                [
-                    "avg_duration_ratio",
-                    "avg_depth_ratio",
-                    "avg_area_ratio",
-                    "avg_area100_ratio",
-                    "avg_slope_ratio",
-                    "med_duration_ratio",
-                    "med_depth_ratio",
-                    "med_area_ratio",
-                    "med_area100_ratio",
-                    "med_slope_ratio",
-                ],
-            ),
-            "severity": extract(
-                row,
-                [
-                    "TotalSev_integrated",
-                    "TotalSev_block",
-                    "TotalSev100",
-                    "TotalDur",
-                    "total_area_below100",
-                ],
-            ),
-            "spo2": extract(
-                row, ["avg_spO2", "med_spO2", "max_spO2", "nadir_spO2", "variance_spO2"]
-            ),
-            "time_below_thresholds": extract(
-                row,
-                [
-                    "t100",
-                    "t98",
-                    "t95",
-                    "t92",
-                    "t90",
-                    "t88",
-                    "t85",
-                    "t80",
-                    "t75",
-                    "t70",
-                    "t65",
-                    "t60",
-                    "t55",
-                    "t50",
-                ],
-            ),
+            "odi": try_parse_number(row.get("ODI")),
+            "desaturation": extract(row, DESATURATION_MAP),
+            "recovery": extract(row, RECOVERY_MAP),
+            "ratios": extract(row, RATIOS_MAP),
+            "severity": extract(row, SEVERITY_MAP),
+            "spo2": extract(row, SPO2_MAP),
+            "time_below_thresholds": extract(row, TIME_BELOW_THRESHOLDS_MAP),
         }
         payloads.append(payload)
 
