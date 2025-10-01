@@ -456,6 +456,7 @@ Lors de la conversion et du téléversement, la classe `SLFConversion` évite sy
         - Extraction d’identifiants patients et visites
         - Conversion numérique en *int* (entier) ou *float* (relatif) grâce à la fonction `try_parse_number(value, as_int: bool = False): Optional[Union[int, float]]` permettant d’éviter les erreurs.
         - Structuration des champs par catégories (`desaturation`, `recovery`, `ratios`, etc.) représentant les tables de MARS dans lesquelles les données seront envoyées.
+        - Mapping des champs du fichier Excel vers les champs du JSON (convention _snake_case_) via le fichier `excel_mapping.py`.
         
         Renvoie une liste de dictionnaires, chacun représentant un enregistrement patient.
         

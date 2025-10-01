@@ -456,7 +456,8 @@ It also keeps track of already processed files to avoid duplicates.
     - Extracts patient and visit identifiers
     - Converts numeric values to *int* or *float* using the function `try_parse_number(value, as_int: bool = False): Optional[Union[int, float]]` to avoid errors
     - Structures fields into categories (`desaturation`, `recovery`, `ratios`, etc.) representing the MARS tables where the data will be sent
-    
+    - Mapping the fields in the Excel file to the fields in the JSON file (_snake_case_ convention) using the `excel_mapping.py` file    
+
     Returns a list of dictionaries, each representing a patient record.
     
 - `excel_to_json(): None`
