@@ -168,8 +168,9 @@ def annotation_deltamed(path: Path, patient: str, edf_name: str) -> pd.DataFrame
     # find start date of annotations
     with txt_path.open("r", encoding="latin1") as file:
         sample_text: List[str] = file.readlines()
-        file.close()
+
     start_date_str: str = sample_text[2].strip()
+
     start_datetime_dt: datetime = datetime.strptime(
         f"{start_date_str}-{txt_events_df.iloc[0]['Start_time_real']}",
         DATETIME_FORMAT,
@@ -322,7 +323,7 @@ def annotation_remlogic(txt_path: Path) -> pd.DataFrame:
 
     with txt_path.open("r", encoding="latin1") as file:
         sample_text: List[str] = file.readlines()
-        file.close()
+
     start_date_str: str = sample_text[3].split(":")[-1].split()[0]
 
     header_formats: Dict[str, str] = {
@@ -515,7 +516,7 @@ def load_annotation(
         if txt_path.is_file():
             with txt_path.open("rb") as txt_file:
                 sample_text = txt_file.read()
-                txt_file.close()
+
             if "RemLogic" in str(sample_text):
                 try:
                     data = annotation_remlogic(txt_path)
