@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import datetime
 from pathlib import Path
 from typing import List, Set, Dict, Any
 
@@ -87,18 +88,25 @@ def df_to_json_payloads(df: pd.DataFrame) -> List[Dict[str, Any]]:
 
         payload: Dict[str, Any] = {
             "patient_id": try_parse_number(patient_id, as_int=True),
-            "numero_visite": try_parse_number(numero_visite, as_int=True),
-            "recording_condition": "",
-            "tst": try_parse_number(row.get("TST")),
-            "n_desat": try_parse_number(row.get("n_desat"), as_int=True),
-            "n_reco": try_parse_number(row.get("n_reco"), as_int=True),
-            "odi": try_parse_number(row.get("ODI")),
-            "desaturation": extract(row, DESATURATION_MAP),
-            "recovery": extract(row, RECOVERY_MAP),
-            "ratios": extract(row, RATIOS_MAP),
-            "severity": extract(row, SEVERITY_MAP),
-            "spo2": extract(row, SPO2_MAP),
-            "time_below_thresholds": extract(row, TIME_BELOW_THRESHOLDS_MAP),
+            "visit_number": try_parse_number(numero_visite, as_int=True),
+            "recording_type": None,
+            "recording_date": None,
+            "recording_number": None,
+            "recording_equipment": None,
+            "oximetry_record": {
+                "computing_date_abosa": datetime.date.today().isoformat(),
+                "abosa_version": "",
+                "tst_abosa": try_parse_number(row.get("TST")),
+                "n_desat_abosa": try_parse_number(row.get("n_desat"), as_int=True),
+                "n_reco_abosa": try_parse_number(row.get("n_reco"), as_int=True),
+                "odi_abosa": try_parse_number(row.get("ODI")),
+                "desaturation_events": extract(row, DESATURATION_MAP),
+                "recovery_events": extract(row, RECOVERY_MAP),
+                "ratios": extract(row, RATIOS_MAP),
+                "severity_indices": extract(row, SEVERITY_MAP),
+                "spo2_stats": extract(row, SPO2_MAP),
+                "time_below_thresholds": extract(row, TIME_BELOW_THRESHOLDS_MAP),
+            },
         }
         payloads.append(payload)
 
@@ -145,7 +153,7 @@ def excel_to_json() -> None:
         payloads: List[Dict[str, Any]] = df_to_json_payloads(indicator_df)
 
         for payload in payloads:
-            slf_id = f"PA{payload['patient_id']}_V{payload['numero_visite']}"
+            slf_id = f"PA{payload['patient_id']}_V{payload['visit_number']}"
             print(f"slf_id: {slf_id}")
             if slf_id not in slf_usage:
                 slf_usage[slf_id] = {}
