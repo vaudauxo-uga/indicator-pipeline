@@ -33,6 +33,12 @@ def parse_args():
         choices=["slf_conversion", "import_to_mars"],
         help="Choice of the pipeline's step to execute : 'slf_conversion' to convert psg data to slf folder or 'import_to_mars' to dump the data computed by ABOSA to MARS",
     )
+    parser.add_argument(
+        "--abosa-version",
+        required=False,
+        type=str,
+        help="Version of the software ABOSA to compute indicators",
+    )
 
     args = parser.parse_args()
     if args.step == "slf_conversion" and not args.years:
@@ -86,7 +92,7 @@ def main():
         sftp.close()
 
     else:
-        excel_to_json()
+        excel_to_json(args.abosa_version)
 
 
 if __name__ == "__main__":
