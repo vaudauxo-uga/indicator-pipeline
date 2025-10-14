@@ -65,7 +65,7 @@ def get_excel_from_rel_path(folder_path: Path, rel_path: str) -> pd.DataFrame:
     return df
 
 
-def df_to_json_payloads(df: pd.DataFrame) -> List[Dict[str, Any]]:
+def df_to_json_payloads(df: pd.DataFrame, abosa_version: str) -> List[Dict[str, Any]]:
     """
     Convert each row of an Excel DataFrame into a compliant JSON payload.
     """
@@ -95,7 +95,7 @@ def df_to_json_payloads(df: pd.DataFrame) -> List[Dict[str, Any]]:
             "recording_equipment": None,
             "oximetry_record": {
                 "computing_date_abosa": datetime.date.today().isoformat(),
-                "abosa_version": "",
+                "abosa_version": abosa_version,
                 "tst_abosa": try_parse_number(row.get("TST")),
                 "n_desat_abosa": try_parse_number(row.get("n_desat"), as_int=True),
                 "n_reco_abosa": try_parse_number(row.get("n_reco"), as_int=True),
@@ -113,7 +113,7 @@ def df_to_json_payloads(df: pd.DataFrame) -> List[Dict[str, Any]]:
     return payloads
 
 
-def excel_to_json() -> None:
+def excel_to_json(abosa_version: str) -> None:
     """
     Processes abosa output Excel files and stores the data in JSON payloads.
     """
@@ -150,7 +150,7 @@ def excel_to_json() -> None:
 
         logger.info(f"🚀 Processing : {rel_path}")
         indicator_df: pd.DataFrame = get_excel_from_rel_path(folder, rel_path)
-        payloads: List[Dict[str, Any]] = df_to_json_payloads(indicator_df)
+        payloads: List[Dict[str, Any]] = df_to_json_payloads(indicator_df, abosa_version)
 
         for payload in payloads:
             slf_id = f"PA{payload['patient_id']}_V{payload['visit_number']}"
