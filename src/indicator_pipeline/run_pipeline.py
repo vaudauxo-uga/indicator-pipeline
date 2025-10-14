@@ -37,6 +37,7 @@ def parse_args():
         "--abosa-version",
         required=False,
         type=str,
+        default=None,
         help="Version of the software ABOSA to compute indicators",
     )
 
@@ -92,6 +93,11 @@ def main():
         sftp.close()
 
     else:
+        if args.abosa_version is None:
+            args.abosa_version = "v1.2.2"
+            logger.info("[INFO] No ABOSA version provided, defaulting to v1.2.2")
+        else:
+            logger.info(f"[INFO] Using ABOSA version: {args.abosa_version}")
         excel_to_json(args.abosa_version)
 
 
