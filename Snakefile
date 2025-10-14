@@ -9,6 +9,7 @@ ABOSA_OUTPUT = Path(DESKTOP) / "abosa-output"
 
 DEFAULT_YEAR = str(datetime.now().year)
 YEARS = str(config.get("years",DEFAULT_YEAR)).split()
+ABOSA_VERSION = str(config.get("version", "v1.2.2"))
 
 
 def docker_path(p):
@@ -64,14 +65,15 @@ rule import_to_mars:
         touch("analysis_complete.done")
     params:
         logs_dir=docker_path(LOGS_DIR),
-        abosa_output=docker_path(ABOSA_OUTPUT)
+        abosa_output=docker_path(ABOSA_OUTPUT),
+        abosa_version=ABOSA_VERSION
     shell:
         """
         docker run --rm \
           --env-file .env \
           -v {params.logs_dir}:/app/logs \
           -v {params.abosa_output}:/abosa-output \
-          indicator-pipeline run-pipeline --step import_to_mars
+          indicator-pipeline run-pipeline --step import_to_mars --abosa-version {params.abosa_version}
         """
 
 rule cleanup_slf:
