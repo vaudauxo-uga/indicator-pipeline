@@ -213,6 +213,7 @@ Cette séparation est **gérée automatiquement** dans l’exécution via Snakem
     ```
     
 - L'argument `--config years="2024 2025"` permet de spécifier les années à traiter lors de l'exécution du pipeline. Si aucune année n'est précisée, **l'année en cours est utilisée par défaut**.
+- La version d’**ABOSA** utilisée pour le calcul des indicateurs peut être spécifiée dans le _Snakefile_ ou directement en ligne de commande via l’argument `abosa_version=vx.x.x` (argument facultatif). Par défaut, la version utilisée est la _v1.2.2_.  **Attention**, en cas de changement de version, le pipeline peut ne plus être compatible selon les modifications faites sur le logiciel, en particulier sur les fichiers de sortie.
 - Cette méthode garantit une **exécution modulaire, traçable et reproductible** des différentes étapes.
 - L’exécution complète suit quatre règles :
     1. `run_pipeline` : convertit les fichiers PSG au format *slf*
@@ -242,7 +243,7 @@ Cette séparation est **gérée automatiquement** dans l’exécution via Snakem
     
     ```bash
     run-pipeline --step slf_conversion --years 2022 2023
-    run-pipeline --step import_to_mars
+    run-pipeline --step import_to_mars --abosa-version vx.x.x
     ```
     
 - **Arguments** :
@@ -250,6 +251,7 @@ Cette séparation est **gérée automatiquement** dans l’exécution via Snakem
         - `slf_conversion` : conversion des fichiers de polysomnographie au format *slf*.
         - `import_to_mars` : import des données produites par ABOSA dans la base MARS.
     - `--years` : *Obligatoire pour l’étape `slf_conversion` ; non requis pour `import_to_mars`.* Année(s) à traiter, chaque année correspondant à un dossier du même nom sur le serveur de stockage SFTP. Les années à traiter doivent être séparées par des espaces (ex: `--years 2024 2025`)
+    - `--abosa-version` : *Facultatif*. Chaîne de caractère au format _vx.x.x_, par défaut à _v1.2.2_. Bien s’assurer que la version utilisée est cohérente avec celle indiquée dans le _Snakefile_.
 
 ---
 
