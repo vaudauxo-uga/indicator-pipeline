@@ -93,7 +93,7 @@ def df_to_json_payloads(df: pd.DataFrame, abosa_version: str) -> List[Dict[str, 
             "recording_date": None,
             "recording_number": None,
             "recording_equipment": None,
-            "oximetry_record": {
+            "oximetry_records": {
                 "computing_date_abosa": datetime.date.today().isoformat(),
                 "abosa_version": abosa_version,
                 "tst_abosa": try_parse_number(row.get("TST")),
