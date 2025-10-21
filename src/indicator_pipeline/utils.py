@@ -30,14 +30,20 @@ def parse_recording_number(filename: str) -> str:
 
 def extract_subject_id_from_filename(edf_file: Path) -> str:
     """
-    Extracts a standardized subject ID from an EDF filename patient id and visit number).
-    Returns the subject ID as string "PAxxx_Vx".
+    Extracts a standardized subject ID from an EDF filename patient id, visit number and recording number.
+    Returns the subject ID as string "PAxxx_Vx_FExxxx".
     """
     stem: str = edf_file.stem
     patient_id, visit_suffix = parse_patient_and_visit(stem)
+    recording_number: str = parse_recording_number(stem)
 
-    return f"PA{patient_id}_V{visit_suffix}" if visit_suffix else f"PA{patient_id}"
+    parts: List[str] = [f"PA{patient_id}"]
+    if visit_suffix:
+        parts.append(f"V{visit_suffix}")
+    if recording_number:
+        parts.append(f"FE{recording_number}")
 
+    return "_".join(parts)
 
 def extract_visits(file_list: List[str]) -> List[str]:
     """
