@@ -21,9 +21,10 @@ def test_parse_patient_and_visit(filename, expected):
 
 
 @pytest.mark.parametrize("filename, expected", [
-    (Path("PA123_V1.edf"), "PA123_V1"),
-    (Path("PA123V2.edf"), "PA123_V2"),
+    (Path("FE3520T1-PA123_V1.edf"), "PA123_V1_FE3520"),
+    (Path("FE457T1_PA123V2.edf"), "PA123_V2_FE457"),
     (Path("PA3643V3C1.edf"), "PA3643_V3"),
+    (Path("FE3456T12-PA6578.edf"), "PA6578_FE3456"),
     (Path("PA045.edf"), "PA045"),
     (Path("junk.edf"), "PA"),
 ])
