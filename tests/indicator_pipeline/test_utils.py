@@ -4,7 +4,7 @@ import pytest
 
 from indicator_pipeline.utils import (
     parse_patient_and_visit,
-    extract_subject_id_from_filename, try_parse_number,
+    extract_subject_id_from_filename, try_parse_number, parse_recording_number,
 )
 
 
@@ -18,6 +18,16 @@ from indicator_pipeline.utils import (
 ])
 def test_parse_patient_and_visit(filename, expected):
     assert parse_patient_and_visit(filename) == expected
+
+
+@pytest.mark.parametrize("filename, expected", [
+    ("FE1234T1-PA123_V1", "1234"),
+    ("FE6547-PA001_V02", ""),
+    ("invalid_filename", ""),
+    ("FE1T1-PA657_V1", "1"),
+])
+def test_parse_recording_number(filename, expected):
+    assert parse_recording_number(filename) == expected
 
 
 @pytest.mark.parametrize("filename, expected", [
