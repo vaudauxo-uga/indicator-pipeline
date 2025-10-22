@@ -5,7 +5,7 @@ from typing import List, Dict, Tuple, Set
 
 from indicator_pipeline.sftp_client import SFTPClient
 from indicator_pipeline.utils import parse_patient_and_visit, lowercase_extensions, load_slf_usage, save_slf_usage, \
-    extract_visits
+    extract_visits, extract_recording_values
 from sleeplab_converter.mars_database.convert import convert_dataset
 
 logger = logging.getLogger(__name__)
@@ -73,6 +73,28 @@ class SLFConversion:
 
         return len(missing_visits) == 0, missing_visits, True
 
+    def check_patient_recordings(self, remote_patient_path: PurePosixPath) -> Tuple[bool, List[Tuple[str, str]], bool]:
+        """
+        Checks whether all recordings (Vx_FEyyyy) for a patient already have an associated slf folder.
+        Returns:
+            - all_psg_converted: bool => if all recordings have an associated slf folder
+            - missing_recordings: List[str] => list of recordings (e.g., ["V1_FE0001", "V1_FE0002"]) without slf
+            - has_valid_psg: bool => if the patient folder has at least one valid recording to convert
+        """
+        existing_files: List[str] = self.sftp_client.list_files(str(remote_patient_path))
+        expected_recordings: List[Tuple[str, str]] = extract_recording_values(existing_files)
+        slf_folders: List[str] = [name for name in existing_files if name.startswith("slf_")]
+
+        if not expected_recordings:
+            return True, [], False
+
+        missing_recordings = [
+            (visit, fe) for (visit, fe) in expected_recordings
+            if not any(f"{visit}_{fe}" in slf for slf in slf_folders)
+        ]
+
+        return len(missing_recordings) == 0, missing_recordings, True
+
     def convert_folder_to_slf(self, patients: List[str]):
         """
         Downloads all patient folders for a given year from a remote SFTP server in a temporary folder,
@@ -90,7 +112,7 @@ class SLFConversion:
             downloaded_count: int = 0
             for patient_id in patients:
                 remote_patient_path: PurePosixPath = self.remote_year_dir / patient_id
-                all_psg_converted, missing_visits, has_valid_psg = self.check_patient_visits(remote_patient_path)
+                all_psg_converted, missing_recording, has_valid_psg = self.check_patient_recordings(remote_patient_path)
 
                 if not has_valid_psg:
                     logger.warning(f"[SKIP] No valid T1 PSG found for {patient_id}")
@@ -100,17 +122,23 @@ class SLFConversion:
                     logger.info(f"[SKIP] All SLF already exist for {patient_id}")
                     continue
                 else:
-                    logger.info(f"[PROCESS] Missing visits for {patient_id}: {missing_visits}")
+                    logger.info(f"[PROCESS] Missing visits for {patient_id}: {missing_recording}")
 
                 local_patient_dir: Path = local_year_dir / patient_id
                 remote_files: List[str] = self.sftp_client.list_files(str(remote_patient_path))
                 valid_exts = (".edf", ".txt", ".rtf", ".csv")
 
-                files_to_download: List[str] = [
-                    f
-                    for f in remote_files
-                    if f.lower().endswith(valid_exts) and "T1-" in f and any(visit in f for visit in missing_visits)
-                ]
+                files_to_download: List[str] = []
+                for visit, rec_number in missing_recording:
+                    pattern = f"{visit}_{rec_number}"
+                    matching_files = [
+                        f for f in remote_files
+                        if f.lower().endswith(valid_exts)
+                           and "T1-" in f
+                           and pattern in f
+                    ]
+                    files_to_download.extend(matching_files)
+
                 if not files_to_download:
                     logger.warning(f"[SKIP] No valid T1 files to download for patient {patient_id}")
                     continue
@@ -120,7 +148,7 @@ class SLFConversion:
                     local_file_path = local_patient_dir / f
                     self.sftp_client.download_file(str(remote_file_path), local_file_path)
 
-                logger.info(f"[COPY] Copied missing visits {missing_visits} locally to {local_patient_dir}")
+                logger.info(f"[COPY] Copied missing recordings {missing_recording} locally to {local_patient_dir}")
                 lowercase_extensions(local_patient_dir)
                 downloaded_count += 1
 
@@ -156,12 +184,12 @@ class SLFConversion:
             folder_patient_id: str = patient_folder.name.split("_")[0]
 
             remote_raw_dir: PurePosixPath = self.remote_year_dir / folder_patient_id
-            all_psg_converted, missing_visits, _ = self.check_patient_visits(remote_raw_dir)
+            all_psg_converted, missing_recordings, _ = self.check_patient_recordings(remote_raw_dir)
             if all_psg_converted:
                 logger.info(f"[SKIP] All SLF already exist for {folder_patient_id}")
                 continue
             else:
-                logger.info(f"[UPLOAD] Missing SLF for visits: {missing_visits}")
+                logger.info(f"[UPLOAD] Missing SLF for recordings: {missing_recordings}")
 
             try:
                 remote_files: List[str] = self.sftp_client.list_files(
@@ -194,8 +222,8 @@ class SLFConversion:
             if inconsistent:
                 continue
 
-            for visit in missing_visits:
-                expected_name = f"{folder_patient_id}_{visit}"
+            for visit, rec_number in missing_recordings:
+                expected_name = f"{folder_patient_id}_{visit}_{rec_number}"
                 local_visit_folder = local_year_dir / expected_name
                 if not local_visit_folder.exists():
                     logger.warning(f"[WARNING] Missing local folder {expected_name}")
