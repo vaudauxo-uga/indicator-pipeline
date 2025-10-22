@@ -103,6 +103,9 @@ class SLFConversion:
         expected_recordings: List[Tuple[str, str]] = extract_recording_values(
             existing_files
         )
+        expected_recordings = [
+            (visit, fe) for (visit, fe) in expected_recordings if visit and fe
+        ]
         slf_folders: List[str] = [
             name for name in existing_files if name.startswith("slf_")
         ]
