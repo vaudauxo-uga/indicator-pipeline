@@ -76,8 +76,8 @@ def extract_recording_values(file_list: List[str]) -> List[Tuple[str, str]]:
             continue
         match = pattern.search(filename)
         if match:
-            visit = f"V{match.group(1)}"
-            recording = f"FE{match.group(2)}"
+            visit = f"V{match.group(2)}"
+            recording = f"FE{match.group(1)}"
             recordings.add((visit, recording))
 
     return sorted(recordings)
