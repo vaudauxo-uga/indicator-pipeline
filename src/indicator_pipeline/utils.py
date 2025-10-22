@@ -2,7 +2,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Optional, Union, Set, Dict, List
+from typing import Optional, Union, Set, Dict, List, Tuple
 
 
 def parse_patient_and_visit(filename: str) -> tuple[str, str]:
@@ -45,6 +45,7 @@ def extract_subject_id_from_filename(edf_file: Path) -> str:
 
     return "_".join(parts)
 
+
 def extract_visits(file_list: List[str]) -> List[str]:
     """
     Extract visits (V1, V2, etc.) from PSG T1 file names.
@@ -60,6 +61,26 @@ def extract_visits(file_list: List[str]) -> List[str]:
         if match:
             visits.add(match.group(1))
     return sorted(visits)
+
+
+def extract_recording_values(file_list: List[str]) -> List[Tuple[str, str]]:
+    """
+    Extracts (visit, recording) tuples from filenames like 'PA1111_V1_FE0001.edf'.
+    Returns: [('V1', 'FE0001'), ('V1', 'FE0002'), ('V2', 'FE0001')]
+    """
+    recordings: Set = set()
+    pattern = re.compile(r"FE?(\d+)T1-PA\w+V(\d+)C\d+")
+
+    for filename in file_list:
+        if not filename.lower().endswith(".edf"):
+            continue
+        match = pattern.search(filename)
+        if match:
+            visit = f"V{match.group(1)}"
+            recording = f"FE{match.group(2)}"
+            recordings.add((visit, recording))
+
+    return sorted(recordings)
 
 
 def try_parse_number(value, as_int: bool = False) -> Optional[Union[int, float]]:
