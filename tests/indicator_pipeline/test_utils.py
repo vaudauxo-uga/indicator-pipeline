@@ -3,28 +3,30 @@ from pathlib import Path
 import pytest
 
 from indicator_pipeline.utils import (
-    parse_patient_and_visit,
+    parse_patient_visit_recording,
     extract_subject_id_from_filename, try_parse_number, parse_recording_number,
 )
 
 
 @pytest.mark.parametrize("filename, expected", [
-    ("PA123_V1", ("123", "1")),
-    ("PA001_V02", ("001", "02")),
-    ("PA999V3", ("999", "3")),
-    ("invalid_filename", ("", "")),
-    ("PA_V", ("", "")),
-    ("PA22875", ("22875", "")),
+    ("PA123_V1_FE0001", ("123", "1", "0001")),
+    ("PA001_V02_FE34", ("001", "02", "34")),
+    ("PA999V3_FE3456", ("999", "3", "3456")),
+    ("PA7864_V12FE1734", ("7864", "12", "1734")),
+    ("PA_V_FE", ("", "", "")),
+    ("PA22875", ("22875", "", "")),
+    ("invalid_filename", ("", "", "")),
 ])
-def test_parse_patient_and_visit(filename, expected):
-    assert parse_patient_and_visit(filename) == expected
+def test_parse_patient_visit_recording(filename, expected):
+    assert parse_patient_visit_recording(filename) == expected
 
 
 @pytest.mark.parametrize("filename, expected", [
     ("FE1234T1-PA123_V1", "1234"),
-    ("FE6547-PA001_V02", ""),
+    ("FE6547-PA001_V02", "6547"),
     ("invalid_filename", ""),
     ("FE1T1-PA657_V1", "1"),
+    ("PA3456_V2_FE0001", "0001"),
 ])
 def test_parse_recording_number(filename, expected):
     assert parse_recording_number(filename) == expected
