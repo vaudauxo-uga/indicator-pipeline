@@ -5,27 +5,28 @@ from pathlib import Path
 from typing import Optional, Union, Set, Dict, List, Tuple
 
 
-def parse_patient_and_visit(filename: str) -> tuple[str, str]:
-    """
-    Extracts patient id and visit number from filename.
-    Returns the patient id and the visit number as string.
-    """
-    match = re.search(r"PA(\d+)(?:_?V(\d+))?", filename)
-    if match:
-        patient_id = match.group(1)
-        visit_number = match.group(2) or ""
-        return patient_id, visit_number
-    return "", ""
-
-
 def parse_recording_number(filename: str) -> str:
     """Extracts recording number from filename."""
 
-    match = re.search(r"FE?(\d+)T", filename)
-
+    match = re.search(r"FE?(\d+)", filename)
     if match:
         return match.group(1)
     return ""
+
+
+def parse_patient_visit_recording(filename: str) -> Tuple[str, str, str]:
+    """
+    Extracts patient id, visit number and recording number from filename.
+    Returns these numbers as strings.
+    """
+    match = re.search(r"PA(\d+)(?:_?V(\d+))?", filename)
+    recording_number = parse_recording_number(filename)
+
+    if match:
+        patient_id = match.group(1)
+        visit_number = match.group(2) or ""
+        return patient_id, visit_number, recording_number
+    return "", "", ""
 
 
 def extract_subject_id_from_filename(edf_file: Path) -> str:
@@ -34,8 +35,7 @@ def extract_subject_id_from_filename(edf_file: Path) -> str:
     Returns the subject ID as string "PAxxx_Vx_FExxxx".
     """
     stem: str = edf_file.stem
-    patient_id, visit_suffix = parse_patient_and_visit(stem)
-    recording_number: str = parse_recording_number(stem)
+    patient_id, visit_suffix, recording_number = parse_patient_visit_recording(stem)
 
     parts: List[str] = [f"PA{patient_id}"]
     if visit_suffix:
