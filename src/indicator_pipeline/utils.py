@@ -21,7 +21,7 @@ def parse_patient_and_visit(filename: str) -> tuple[str, str]:
 def parse_recording_number(filename: str) -> str:
     """Extracts recording number from filename."""
 
-    match = re.search(r"FE(\d+)T", filename)
+    match = re.search(r"FE?(\d+)T", filename)
 
     if match:
         return match.group(1)
