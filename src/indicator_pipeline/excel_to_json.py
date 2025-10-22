@@ -80,15 +80,15 @@ def df_to_json_payloads(df: pd.DataFrame, abosa_version: str) -> List[Dict[str, 
 
     for _, row in df.iterrows():
         filename = str(row.get("Filename", "")).strip()
-        patient_id, numero_visite = parse_patient_and_visit(filename)
+        patient_id, visit_number = parse_patient_and_visit(filename)
 
-        if not patient_id and not numero_visite:
+        if not patient_id and not visit_number:
             logger.warning(f"⛔️ Skipped invalid filename: {filename}")
             continue
 
         payload: Dict[str, Any] = {
             "patient_id": try_parse_number(patient_id, as_int=True),
-            "visit_number": try_parse_number(numero_visite, as_int=True),
+            "visit_number": try_parse_number(visit_number, as_int=True),
             "recording_type": None,
             "recording_date": None,
             "recording_number": None,
