@@ -4,7 +4,8 @@ from pathlib import Path, PurePosixPath
 from typing import List, Dict, Tuple, Set
 
 from indicator_pipeline.sftp_client import SFTPClient
-from indicator_pipeline.utils import parse_patient_and_visit, lowercase_extensions, load_slf_usage, save_slf_usage, \
+from indicator_pipeline.utils import parse_patient_visit_recording, lowercase_extensions, load_slf_usage, \
+    save_slf_usage, \
     extract_visits, extract_recording_values
 from sleeplab_converter.mars_database.convert import convert_dataset
 
@@ -207,7 +208,7 @@ class SLFConversion:
 
             inconsistent: bool = False
             for edf in edf_files:
-                expected_patient_id, _ = parse_patient_and_visit(edf)
+                expected_patient_id, _, _ = parse_patient_visit_recording(edf)
                 if (
                         expected_patient_id
                         and expected_patient_id != folder_patient_id.replace("PA", "")
