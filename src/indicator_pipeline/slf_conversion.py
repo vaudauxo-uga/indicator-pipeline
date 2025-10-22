@@ -91,10 +91,10 @@ class SLFConversion:
         self, remote_patient_path: PurePosixPath
     ) -> Tuple[bool, List[Tuple[str, str]], bool]:
         """
-        Checks whether all recordings (Vx_FEyyyy) for a patient already have an associated slf folder.
+        Checks whether all recordings for a patient already have an associated slf folder.
         Returns:
             - all_psg_converted: bool => if all recordings have an associated slf folder
-            - missing_recordings: List[str] => list of recordings (e.g., ["V1_FE0001", "V1_FE0002"]) without slf
+            - missing_recordings: List[Tuple[str, str]] => list of recordings (e.g., ("V1", "FE0001") without slf
             - has_valid_psg: bool => if the patient folder has at least one valid recording to convert
         """
         existing_files: List[str] = self.sftp_client.list_files(
@@ -103,19 +103,27 @@ class SLFConversion:
         expected_recordings: List[Tuple[str, str]] = extract_recording_values(
             existing_files
         )
-        expected_recordings = [
-            (visit, fe) for (visit, fe) in expected_recordings if visit and fe
-        ]
+        incomplete = [(v, fe) for (v, fe) in expected_recordings if not v or not fe]
+        complete = [(v, fe) for (v, fe) in expected_recordings if v and fe]
+
+        if incomplete:
+            incomplete_str = ", ".join(
+                [f"({v or '∅'}, {fe or '∅'})" for v, fe in incomplete]
+            )
+            logger.warning(
+                f"[WARNING] Incomplete recording info found for {remote_patient_path.name}: {incomplete_str}"
+            )
+
         slf_folders: List[str] = [
             name for name in existing_files if name.startswith("slf_")
         ]
 
-        if not expected_recordings:
+        if not complete:
             return True, [], False
 
         missing_recordings = [
             (visit, fe)
-            for (visit, fe) in expected_recordings
+            for (visit, fe) in complete
             if not any(f"{visit}_{fe}" in slf for slf in slf_folders)
         ]
 
