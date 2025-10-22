@@ -169,8 +169,7 @@ def excel_to_json(abosa_version: str) -> None:
         )
 
         for payload in payloads:
-            slf_id = f"PA{payload['patient_id']}_V{payload['visit_number']}"
-            print(f"slf_id: {slf_id}")
+            slf_id = f"PA{payload['patient_id']}_V{payload['visit_number']}_FE{payload['recording_number']}"
             if slf_id not in slf_usage:
                 slf_usage[slf_id] = {}
             slf_usage[slf_id]["abosa"] = True
