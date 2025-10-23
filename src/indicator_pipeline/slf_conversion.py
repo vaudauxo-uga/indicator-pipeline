@@ -67,7 +67,7 @@ class SLFConversion:
         Checks whether all recordings for a patient already have an associated slf folder.
         Returns:
             - all_psg_converted: bool => if all recordings have an associated slf folder
-            - missing_recordings: List[Tuple[str, str]] => list of recordings (e.g., ("V1", "FE0001") without slf
+            - missing_recordings: List[Tuple[str, str]] => list of recordings (e.g., ("V1", "FE0001")) without slf
             - has_valid_psg: bool => if the patient folder has at least one valid recording to convert
         """
         existing_files: List[str] = self.sftp_client.list_files(
