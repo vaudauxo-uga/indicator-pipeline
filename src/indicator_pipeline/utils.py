@@ -6,7 +6,7 @@ from typing import Optional, Union, Set, Dict, List, Tuple
 
 
 def parse_recording_number(filename: str) -> str:
-    """Extracts recording number from filename."""
+    """Extracts recording number FExxxx from edf or slf filename."""
 
     match = re.search(r"FE?(\d+)", filename)
     if match:
@@ -44,23 +44,6 @@ def extract_subject_id_from_filename(edf_file: Path) -> str:
         parts.append(f"FE{recording_number}")
 
     return "_".join(parts)
-
-
-def extract_visits(file_list: List[str]) -> List[str]:
-    """
-    Extract visits (V1, V2, etc.) from PSG T1 file names.
-    Automatically deduplicate even if multiple records exist for the same visit/night.
-    """
-    visits: Set = set()
-    pattern = re.compile(r"F\w+T1-PA\w+(V\d+)C\d+", re.I)
-
-    for filename in file_list:
-        if not filename.lower().endswith(".edf"):
-            continue
-        match = pattern.match(filename)
-        if match:
-            visits.add(match.group(1))
-    return sorted(visits)
 
 
 def extract_recording_values(file_list: List[str]) -> List[Tuple[str, str]]:
