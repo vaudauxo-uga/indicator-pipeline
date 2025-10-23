@@ -60,34 +60,6 @@ class SLFConversion:
 
         save_slf_usage(slf_usage)
 
-    def check_patient_visits(
-        self, remote_patient_path: PurePosixPath
-    ) -> Tuple[bool, List[str], bool]:
-        """
-        Checks whether all T1 visits for a patient already have an associated slf folder.
-        Returns :
-            - all_psg_converted: bool => if all T1 visits have an associated slf folder
-            - missing_visits: List[str] => list of visits (e.g., ["V1", "V2"]) without slf
-            - has_valid_psg: bool => if the patient folder has at least one valid T1 visits to convert
-        """
-        existing_files: List[str] = self.sftp_client.list_files(
-            str(remote_patient_path)
-        )
-        expected_visits: List[str] = extract_visits(existing_files)
-        slf_folders: List[str] = [
-            name for name in existing_files if name.startswith("slf_")
-        ]
-
-        if not expected_visits:
-            return True, expected_visits, False
-
-        missing_visits: List[str] = []
-        for visit in expected_visits:
-            if not any(visit in slf for slf in slf_folders):
-                missing_visits.append(visit)
-
-        return len(missing_visits) == 0, missing_visits, True
-
     def check_patient_recordings(
         self, remote_patient_path: PurePosixPath
     ) -> Tuple[bool, List[Tuple[str, str]], bool]:
