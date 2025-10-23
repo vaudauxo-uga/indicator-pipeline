@@ -7,10 +7,22 @@ from typing import List, Set, Dict, Any
 
 import pandas as pd
 
-from indicator_pipeline.excel_mapping import DESATURATION_MAP, RECOVERY_MAP, RATIOS_MAP, SEVERITY_MAP, SPO2_MAP, \
-    TIME_BELOW_THRESHOLDS_MAP
-from indicator_pipeline.utils import get_repo_root, parse_patient_and_visit, try_parse_number, get_log_dir, \
-    load_slf_usage, save_slf_usage
+from indicator_pipeline.excel_mapping import (
+    DESATURATION_MAP,
+    RECOVERY_MAP,
+    RATIOS_MAP,
+    SEVERITY_MAP,
+    SPO2_MAP,
+    TIME_BELOW_THRESHOLDS_MAP,
+)
+from indicator_pipeline.utils import (
+    get_repo_root,
+    parse_patient_visit_recording,
+    try_parse_number,
+    get_log_dir,
+    load_slf_usage,
+    save_slf_usage,
+)
 
 logger = logging.getLogger(__name__)
 PROCESSED_PATH: Path = get_log_dir() / "processed.json"
@@ -80,20 +92,22 @@ def df_to_json_payloads(df: pd.DataFrame, abosa_version: str) -> List[Dict[str, 
 
     for _, row in df.iterrows():
         filename = str(row.get("Filename", "")).strip()
-        patient_id, numero_visite = parse_patient_and_visit(filename)
+        patient_id, visit_number, recording_number = parse_patient_visit_recording(
+            filename
+        )
 
-        if not patient_id and not numero_visite:
+        if not patient_id and not visit_number:
             logger.warning(f"⛔️ Skipped invalid filename: {filename}")
             continue
 
         payload: Dict[str, Any] = {
             "patient_id": try_parse_number(patient_id, as_int=True),
-            "visit_number": try_parse_number(numero_visite, as_int=True),
+            "visit_number": try_parse_number(visit_number, as_int=True),
             "recording_type": None,
             "recording_date": None,
-            "recording_number": None,
+            "recording_number": try_parse_number(recording_number, as_int=True),
             "recording_equipment": None,
-            "oximetry_record": {
+            "oximetry_records": {
                 "computing_date_abosa": datetime.date.today().isoformat(),
                 "abosa_version": abosa_version,
                 "tst_abosa": try_parse_number(row.get("TST")),
@@ -150,11 +164,12 @@ def excel_to_json(abosa_version: str) -> None:
 
         logger.info(f"🚀 Processing : {rel_path}")
         indicator_df: pd.DataFrame = get_excel_from_rel_path(folder, rel_path)
-        payloads: List[Dict[str, Any]] = df_to_json_payloads(indicator_df, abosa_version)
+        payloads: List[Dict[str, Any]] = df_to_json_payloads(
+            indicator_df, abosa_version
+        )
 
         for payload in payloads:
-            slf_id = f"PA{payload['patient_id']}_V{payload['visit_number']}"
-            print(f"slf_id: {slf_id}")
+            slf_id = f"PA{payload['patient_id']}_V{payload['visit_number']}_FE{payload['recording_number']}"
             if slf_id not in slf_usage:
                 slf_usage[slf_id] = {}
             slf_usage[slf_id]["abosa"] = True

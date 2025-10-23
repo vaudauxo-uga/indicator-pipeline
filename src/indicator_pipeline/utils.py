@@ -2,48 +2,68 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Optional, Union, Set, Dict, List
+from typing import Optional, Union, Set, Dict, List, Tuple
 
 
-def parse_patient_and_visit(filename: str) -> tuple[str, str]:
+def parse_recording_number(filename: str) -> str:
+    """Extracts recording number FExxxx from edf or slf filename."""
+
+    match = re.search(r"FE(\d+)", filename)
+    if match:
+        return match.group(1)
+    return ""
+
+
+def parse_patient_visit_recording(filename: str) -> Tuple[str, str, str]:
     """
-    Extracts patient id and visit number from filename.
-    Returns the patient id and the visit number as string.
+    Extracts patient id, visit number and recording number from filename.
+    Returns these numbers as strings.
     """
     match = re.search(r"PA(\d+)(?:_?V(\d+))?", filename)
+    recording_number = parse_recording_number(filename)
+
     if match:
         patient_id = match.group(1)
         visit_number = match.group(2) or ""
-        return patient_id, visit_number
-    return "", ""
+        return patient_id, visit_number, recording_number
+    return "", "", ""
 
 
 def extract_subject_id_from_filename(edf_file: Path) -> str:
     """
-    Extracts a standardized subject ID from an EDF filename patient id and visit number).
-    Returns the subject ID as string "PAxxx_Vx".
+    Extracts a standardized subject ID from an EDF filename patient id, visit number and recording number.
+    Returns the subject ID as string "PAxxx_Vx_FExxxx".
     """
     stem: str = edf_file.stem
-    patient_id, visit_suffix = parse_patient_and_visit(stem)
+    patient_id, visit_suffix, recording_number = parse_patient_visit_recording(stem)
 
-    return f"PA{patient_id}_V{visit_suffix}" if visit_suffix else f"PA{patient_id}"
+    parts: List[str] = [f"PA{patient_id}"]
+    if visit_suffix:
+        parts.append(f"V{visit_suffix}")
+    if recording_number:
+        parts.append(f"FE{recording_number}")
+
+    return "_".join(parts)
 
 
-def extract_visits(file_list: List[str]) -> List[str]:
+def extract_recording_values(file_list: List[str]) -> List[Tuple[str, str]]:
     """
-    Extract visits (V1, V2, etc.) from PSG T1 file names.
-    Automatically deduplicate even if multiple records exist for the same visit/night.
+    Extracts (visit, recording) tuples from EDF filenames.
+    Returns: [('V1', 'FE0001'), ('V1', 'FE0002'), ('V2', 'FE0001')]
     """
-    visits: Set = set()
-    pattern = re.compile(r"F\w+T1-PA\w+(V\d+)C\d+", re.I)
+    recordings: Set = set()
+    pattern = re.compile(r"FE(\d+)T1-PA\w+V(\d+)C\d+")
 
     for filename in file_list:
         if not filename.lower().endswith(".edf"):
             continue
-        match = pattern.match(filename)
+        match = pattern.search(filename)
         if match:
-            visits.add(match.group(1))
-    return sorted(visits)
+            visit = f"V{match.group(2)}"
+            recording = f"FE{match.group(1)}"
+            recordings.add((visit, recording))
+
+    return sorted(recordings)
 
 
 def try_parse_number(value, as_int: bool = False) -> Optional[Union[int, float]]:
