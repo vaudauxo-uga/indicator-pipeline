@@ -8,7 +8,7 @@ from typing import Optional, Union, Set, Dict, List, Tuple
 def parse_recording_number(filename: str) -> str:
     """Extracts recording number FExxxx from edf or slf filename."""
 
-    match = re.search(r"FE?(\d+)", filename)
+    match = re.search(r"FE(\d+)", filename)
     if match:
         return match.group(1)
     return ""
@@ -52,7 +52,7 @@ def extract_recording_values(file_list: List[str]) -> List[Tuple[str, str]]:
     Returns: [('V1', 'FE0001'), ('V1', 'FE0002'), ('V2', 'FE0001')]
     """
     recordings: Set = set()
-    pattern = re.compile(r"FE?(\d+)T1-PA\w+V(\d+)C\d+")
+    pattern = re.compile(r"FE(\d+)T1-PA\w+V(\d+)C\d+")
 
     for filename in file_list:
         if not filename.lower().endswith(".edf"):
