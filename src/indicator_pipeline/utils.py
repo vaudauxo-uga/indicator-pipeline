@@ -48,7 +48,7 @@ def extract_subject_id_from_filename(edf_file: Path) -> str:
 
 def extract_recording_values(file_list: List[str]) -> List[Tuple[str, str]]:
     """
-    Extracts (visit, recording) tuples from filenames like 'PA1111_V1_FE0001.edf'.
+    Extracts (visit, recording) tuples from EDF filenames.
     Returns: [('V1', 'FE0001'), ('V1', 'FE0002'), ('V2', 'FE0001')]
     """
     recordings: Set = set()
