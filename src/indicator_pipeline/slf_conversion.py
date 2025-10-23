@@ -10,7 +10,6 @@ from indicator_pipeline.utils import (
     lowercase_extensions,
     load_slf_usage,
     save_slf_usage,
-    extract_visits,
     extract_recording_values,
 )
 from sleeplab_converter.mars_database.convert import convert_dataset
