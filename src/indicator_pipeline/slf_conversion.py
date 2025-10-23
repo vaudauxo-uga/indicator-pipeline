@@ -1,7 +1,8 @@
 import logging
+import re
 import tempfile
 from pathlib import Path, PurePosixPath
-from typing import List, Dict, Tuple, Set
+from typing import List, Dict, Tuple
 
 from indicator_pipeline.sftp_client import SFTPClient
 from indicator_pipeline.utils import (
@@ -170,13 +171,13 @@ class SLFConversion:
 
                 files_to_download: List[str] = []
                 for visit, rec_number in missing_recording:
-                    pattern = f"{visit}_{rec_number}"
                     matching_files = [
                         f
                         for f in remote_files
                         if f.lower().endswith(valid_exts)
                         and "T1-" in f
-                        and pattern in f
+                        and re.search(rf"{visit}C", f)
+                        and re.search(rf"{rec_number}T", f)
                     ]
                     files_to_download.extend(matching_files)
 
