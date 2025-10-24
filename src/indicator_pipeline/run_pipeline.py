@@ -71,8 +71,8 @@ def main():
 
         for year in args.years:
             start_year = time.time()
-            server_year_dir: PurePosixPath = PurePosixPath().joinpath(
-                "home", "hp2", "Raw_data", "PSG_data_MARS", "C1", year
+            server_year_dir = PurePosixPath(
+                f"/mnt/storage1/hp2/Raw_data/PSG_data_MARS/C1/{year}"
             )
             local_slf_output: Path = get_local_slf_output()
 
