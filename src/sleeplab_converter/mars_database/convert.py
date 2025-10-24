@@ -343,23 +343,11 @@ def read_series(
                     recording_type,
                 ) = parse_annotations(header, edf_path, edf_name=edf_file.stem)
                 if not events:
-                    (
-                        events,
-                        aasm_sleep_stages,
-                        aasm_events,
-                        analysis_start,
-                        analysis_end,
-                        lights_off,
-                        lights_on,
-                        recording_type,
-                    ) = parse_annotations(
-                        header,
-                        edf_path,
-                        edf_name=edf_file.stem,
-                    )
+                    error_counts["annot_parse_error"] += 1
                     logger.warning(
-                        f"Cannot find annotations for subject {edf_path.stem}"
+                        f"[SKIP] Cannot find annotations for subject {edf_path.stem}"
                     )
+                    continue
             except Exception as e:
                 logger.warning(
                     f"[SKIP] Skipping subject {edf_path.stem} due to error in annotation parsing:"
