@@ -40,6 +40,7 @@ rule run_pipeline:
           --env-file .env \
           -v {params.logs_dir}:/app/logs \
           -v {params.slf_output}:/app/slf-output \
+          -v /c/Users/vaudauxo/Documents/.ssh/ssh-mars-openssh:/app/.ssh/ssh-mars-openssh:ro \
           indicator-pipeline run-pipeline --step slf_conversion --years {params.years}
         """
 
