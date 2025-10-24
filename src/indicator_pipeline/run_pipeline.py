@@ -81,12 +81,11 @@ def main():
                 logger.info(f"Found {len(patients)} patient folders: {patients}")
             except FileNotFoundError:
                 logger.warning(
-                    f"[SKIP] Année {year} introuvable sur le SFTP ({server_year_dir}). Passage à l'année suivante."
-                )
+                    f"[SKIP] Year {year} not found on SFTP ({server_year_dir}). Moving on to the next year.")
                 continue
 
             if not patients:
-                logger.info(f"[INFO] Aucune donnée trouvée pour l'année {year}.")
+                logger.info(f"[INFO] No data found for the year {year}.")
                 continue
 
             slf_converter: SLFConversion = SLFConversion(
