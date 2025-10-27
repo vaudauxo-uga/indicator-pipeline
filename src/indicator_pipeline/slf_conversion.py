@@ -1,6 +1,7 @@
 import logging
 import re
 import tempfile
+import time
 from pathlib import Path, PurePosixPath
 from typing import List, Dict, Tuple
 
@@ -175,16 +176,20 @@ class SLFConversion:
                 logger.info(
                     f"[CONVERT] Starting conversion for {downloaded_count} patient(s)"
                 )
+
+                start_conv = time.time()
                 convert_dataset(
                     input_dir=tmp_root_path,
                     output_dir=self.local_slf_output,
                     series=self.remote_year_dir.name,
                     ds_name="slf_to_compute",
                 )
+                conv_duration = time.time() - start_conv
 
                 self.add_slf_usage()
                 logger.info(
-                    f"[CONVERT] Finished conversion for {downloaded_count} patient(s)"
+                    f"[TIME] [CONVERT] Finished conversion in {conv_duration:.2f}s for {downloaded_count} patient(s) "
+                    f"({conv_duration/downloaded_count:.2f}s per patient)"
                 )
 
     def upload_slf_folders_to_server(self):
@@ -202,6 +207,9 @@ class SLFConversion:
             )
             return
 
+        start_upload = time.time()
+        uploaded_count: int = 0
+
         patients: Dict[str, List[Path]] = {}
         for patient_folder in local_year_dir.iterdir():
             if not patient_folder.is_dir():
@@ -218,7 +226,7 @@ class SLFConversion:
                 logger.info(f"[SKIP] All SLF already exist for {patient_id}")
                 continue
 
-            logger.info(f"[UPLOAD] Missing SLF for recordings: {missing_recordings}")
+            logger.info(f"[UPLOAD] Missing SLF for {patient_id} : {missing_recordings}")
 
             try:
                 remote_files: List[str] = self.sftp_client.list_files(
@@ -237,9 +245,8 @@ class SLFConversion:
             inconsistent: bool = False
             for edf in edf_files:
                 expected_patient_id, _, _ = parse_patient_visit_recording(edf)
-                if (
-                    expected_patient_id
-                    and expected_patient_id != patient_id.replace("PA", "")
+                if expected_patient_id and expected_patient_id != patient_id.replace(
+                    "PA", ""
                 ):
                     logger.warning(
                         f"[WARNING] Inconsistent patient ID: folder = {patient_id}, "
@@ -259,9 +266,7 @@ class SLFConversion:
                     continue
 
                 slf_remote_name = f"slf_{local_visit_folder.name}"
-                remote_visit_dir = (
-                    self.remote_year_dir / patient_id / slf_remote_name
-                )
+                remote_visit_dir = self.remote_year_dir / patient_id / slf_remote_name
 
                 logger.info(
                     f"[UPLOAD] Uploading {local_visit_folder} to {remote_visit_dir}"
@@ -269,3 +274,13 @@ class SLFConversion:
                 self.sftp_client.upload_folder_recursive(
                     local_visit_folder, str(remote_visit_dir)
                 )
+                uploaded_count += 1
+
+        upload_duration = time.time() - start_upload
+        if uploaded_count > 0:
+            logger.info(
+                f"[TIME] [UPLOAD] Uploaded {uploaded_count} patient(s) in {upload_duration:.2f}s "
+                f"({upload_duration / uploaded_count:.2f}s per patient)"
+            )
+        else:
+            logger.info("[UPLOAD] No patients were uploaded.")
