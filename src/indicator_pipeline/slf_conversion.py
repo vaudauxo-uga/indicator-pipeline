@@ -188,7 +188,7 @@ class SLFConversion:
 
                 self.add_slf_usage()
                 logger.info(
-                    f"[CONVERT] Finished conversion in {conv_duration:.2f}s for {downloaded_count} patient(s) "
+                    f"[TIME] [CONVERT] Finished conversion in {conv_duration:.2f}s for {downloaded_count} patient(s) "
                     f"({conv_duration/downloaded_count:.2f}s per patient)"
                 )
 
@@ -279,7 +279,7 @@ class SLFConversion:
         upload_duration = time.time() - start_upload
         if uploaded_count > 0:
             logger.info(
-                f"[UPLOAD] Uploaded {uploaded_count} patient(s) in {upload_duration:.2f}s "
+                f"[TIME] [UPLOAD] Uploaded {uploaded_count} patient(s) in {upload_duration:.2f}s "
                 f"({upload_duration / uploaded_count:.2f}s per patient)"
             )
         else:

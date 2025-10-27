@@ -97,12 +97,12 @@ def main():
 
             elapsed_year = time.time() - start_year
             logger.info(
-                f"[YEAR] Completed {year} in {elapsed_year:.2f}s ({elapsed_year/60:.2f} min)"
+                f"[TIME] [YEAR] Completed {year} in {elapsed_year:.2f}s ({elapsed_year/60:.2f} min)"
             )
 
         total_elapsed = time.time() - start_global
         logger.info(
-            f"[END] SLF conversion for all years completed in {total_elapsed:.2f}s ({total_elapsed/60:.2f} min)"
+            f"[TIME] [END] SLF conversion for all years completed in {total_elapsed:.2f}s ({total_elapsed/60:.2f} min)"
         )
 
         sftp.close()
