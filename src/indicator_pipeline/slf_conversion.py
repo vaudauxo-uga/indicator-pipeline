@@ -202,23 +202,23 @@ class SLFConversion:
             )
             return
 
+        patients: Dict[str, List[Path]] = {}
         for patient_folder in local_year_dir.iterdir():
             if not patient_folder.is_dir():
                 continue
+            patient_id = patient_folder.name.split("_")[0]
+            patients.setdefault(patient_id, []).append(patient_folder)
 
-            folder_patient_id: str = patient_folder.name.split("_")[0]
-
-            remote_raw_dir: PurePosixPath = self.remote_year_dir / folder_patient_id
+        for patient_id, folders in patients.items():
+            remote_raw_dir: PurePosixPath = self.remote_year_dir / patient_id
             all_psg_converted, missing_recordings, _ = self.check_patient_recordings(
                 remote_raw_dir
             )
             if all_psg_converted:
-                logger.info(f"[SKIP] All SLF already exist for {folder_patient_id}")
+                logger.info(f"[SKIP] All SLF already exist for {patient_id}")
                 continue
-            else:
-                logger.info(
-                    f"[UPLOAD] Missing SLF for recordings: {missing_recordings}"
-                )
+
+            logger.info(f"[UPLOAD] Missing SLF for recordings: {missing_recordings}")
 
             try:
                 remote_files: List[str] = self.sftp_client.list_files(
@@ -239,10 +239,10 @@ class SLFConversion:
                 expected_patient_id, _, _ = parse_patient_visit_recording(edf)
                 if (
                     expected_patient_id
-                    and expected_patient_id != folder_patient_id.replace("PA", "")
+                    and expected_patient_id != patient_id.replace("PA", "")
                 ):
                     logger.warning(
-                        f"[WARNING] Inconsistent patient ID: folder = {folder_patient_id}, "
+                        f"[WARNING] Inconsistent patient ID: folder = {patient_id}, "
                         f"EDF = {edf} (expected = {expected_patient_id})"
                     )
                     inconsistent = True
@@ -252,7 +252,7 @@ class SLFConversion:
                 continue
 
             for visit, rec_number in missing_recordings:
-                expected_name = f"{folder_patient_id}_{visit}_{rec_number}"
+                expected_name = f"{patient_id}_{visit}_{rec_number}"
                 local_visit_folder = local_year_dir / expected_name
                 if not local_visit_folder.exists():
                     logger.warning(f"[WARNING] Missing local folder {expected_name}")
@@ -260,7 +260,7 @@ class SLFConversion:
 
                 slf_remote_name = f"slf_{local_visit_folder.name}"
                 remote_visit_dir = (
-                    self.remote_year_dir / folder_patient_id / slf_remote_name
+                    self.remote_year_dir / patient_id / slf_remote_name
                 )
 
                 logger.info(
