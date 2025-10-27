@@ -1,6 +1,7 @@
 import logging
 import re
 import tempfile
+import time
 from pathlib import Path, PurePosixPath
 from typing import List, Dict, Tuple
 
@@ -175,16 +176,20 @@ class SLFConversion:
                 logger.info(
                     f"[CONVERT] Starting conversion for {downloaded_count} patient(s)"
                 )
+
+                start_conv = time.time()
                 convert_dataset(
                     input_dir=tmp_root_path,
                     output_dir=self.local_slf_output,
                     series=self.remote_year_dir.name,
                     ds_name="slf_to_compute",
                 )
+                conv_duration = time.time() - start_conv
 
                 self.add_slf_usage()
                 logger.info(
-                    f"[CONVERT] Finished conversion for {downloaded_count} patient(s)"
+                    f"[CONVERT] Finished conversion in {conv_duration:.2f}s for {downloaded_count} patient(s) "
+                    f"({conv_duration/downloaded_count:.2f}s per patient)"
                 )
 
     def upload_slf_folders_to_server(self):
