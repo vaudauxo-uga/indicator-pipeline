@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import time
 from pathlib import PurePosixPath, Path
 
 from dotenv import load_dotenv
@@ -66,7 +67,10 @@ def main():
         )
         sftp.connect()
 
+        start_global = time.time()
+
         for year in args.years:
+            start_year = time.time()
             server_year_dir: PurePosixPath = PurePosixPath().joinpath(
                 "home", "hp2", "Raw_data", "PSG_data_MARS", "C1", year
             )
@@ -77,7 +81,8 @@ def main():
                 logger.info(f"Found {len(patients)} patient folders: {patients}")
             except FileNotFoundError:
                 logger.warning(
-                    f"[SKIP] Année {year} introuvable sur le SFTP ({server_year_dir}). Passage à l'année suivante.")
+                    f"[SKIP] Année {year} introuvable sur le SFTP ({server_year_dir}). Passage à l'année suivante."
+                )
                 continue
 
             if not patients:
@@ -89,6 +94,16 @@ def main():
             )
             slf_converter.convert_folder_to_slf(patients)
             slf_converter.upload_slf_folders_to_server()
+
+            elapsed_year = time.time() - start_year
+            logger.info(
+                f"[YEAR] Completed {year} in {elapsed_year:.2f}s ({elapsed_year/60:.2f} min)"
+            )
+
+        total_elapsed = time.time() - start_global
+        logger.info(
+            f"[END] SLF conversion for all years completed in {total_elapsed:.2f}s ({total_elapsed/60:.2f} min)"
+        )
 
         sftp.close()
 
