@@ -226,7 +226,7 @@ class SLFConversion:
                 logger.info(f"[SKIP] All SLF already exist for {patient_id}")
                 continue
 
-            logger.info(f"[UPLOAD] Missing SLF for recordings: {missing_recordings}")
+            logger.info(f"[UPLOAD] Missing SLF for {patient_id} : {missing_recordings}")
 
             try:
                 remote_files: List[str] = self.sftp_client.list_files(
