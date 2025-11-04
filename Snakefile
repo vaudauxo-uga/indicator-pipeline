@@ -9,7 +9,7 @@ ABOSA_OUTPUT = Path(DESKTOP) / "abosa-output"
 
 DEFAULT_YEAR = str(datetime.now().year)
 YEARS = str(config.get("years",DEFAULT_YEAR)).split()
-ABOSA_VERSION = str(config.get("abosa_version", "v1.2.2"))
+ABOSA_VERSION = str(config.get("abosa_version", "1.2.2"))
 
 
 def docker_path(p):
