@@ -209,7 +209,7 @@ snakemake --config years="2024 2025" --cores 1
 ```
 
 - The argument `-config years="2024 2025"` specifies the years to process during pipeline execution. If no years are specified, the **current year is used by default**.
-- The version of **ABOSA** used to calculate indicators can be specified in the _Snakefile_ or directly on the command line using the argument `abosa_version=vx.x.x` (optional argument). By default, the version used is _v1.2.2_.  Please note that if the version is changed, the pipeline may no longer be compatible depending on the modifications made to the software, particularly to the output files.
+- The version of **ABOSA** used to calculate indicators can be specified in the _Snakefile_ or directly on the command line using the argument `abosa_version=x.x.x` (optional argument). By default, the version used is _1.2.2_.  Please note that if the version is changed, the pipeline may no longer be compatible depending on the modifications made to the software, particularly to the output files.
 - This method ensures a **modular, traceable, and reproducible** execution of all steps.
 - The full execution follows four rules:
     1. `run_pipeline` : converts PSG files to *slf* format
@@ -240,7 +240,7 @@ snakemake clean --cores 1
 
 ```bash
 run-pipeline --step slf_conversion --years 2022 2023
-run-pipeline --step import_to_mars --abosa-version vx.x.x
+run-pipeline --step import_to_mars --abosa-version x.x.x
 ```
 
 - **Arguments**:
@@ -248,7 +248,7 @@ run-pipeline --step import_to_mars --abosa-version vx.x.x
         - `slf_conversion` : converts polysomnography files to *slf* format.
         - `import_to_mars` : imports the data produced by ABOSA into the MARS database.
     - `--years` : _Required for the `slf_conversion` step; not required for `import_to_mars`._ Year(s) to process, each year corresponding to a folder with the same name on the SFTP storage server. Multiple years must be separated by spaces (e.g., `--years 2024 2025`).
-    - `--abosa-version` : _Optional._ Character string in the format _vx.x.x_, defaulting to _v1.2.2_. Ensure that the version used is consistent with the one specified in the _Snakefile_.
+    - `--abosa-version` : _Optional._ Character string in the format _x.x.x_, defaulting to _1.2.2_. Ensure that the version used is consistent with the one specified in the _Snakefile_.
 
 ---
 
