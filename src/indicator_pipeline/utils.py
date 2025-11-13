@@ -74,7 +74,7 @@ def try_parse_number(value, as_int: bool = False) -> Optional[Union[int, float]]
     try:
         if isinstance(value, str):
             value = value.replace(",", ".")
-        number = float(value)
+        number = round(float(value), 2)
         return int(number) if as_int else number
     except (ValueError, TypeError):
         return None
