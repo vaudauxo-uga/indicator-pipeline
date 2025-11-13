@@ -121,7 +121,9 @@ def df_to_json_payloads(df: pd.DataFrame, abosa_version: str) -> List[Dict[str, 
                     "recovery_event_attributes": extract(row, RECOVERY_MAP),
                     "ratio_attributes": extract(row, RATIOS_MAP),
                     "severity_index_attributes": extract(row, SEVERITY_MAP),
-                    "time_below_threshold_attributes": extract(row, TIME_BELOW_THRESHOLDS_MAP),
+                    "time_below_threshold_attributes": extract(
+                        row, TIME_BELOW_THRESHOLDS_MAP
+                    ),
                 },
             }
         }
@@ -172,7 +174,8 @@ def excel_to_json(abosa_version: str) -> None:
         )
 
         for payload in payloads:
-            slf_id = f"PA{payload['patient_id']}_V{payload['visit_number']}_FE{payload['recording_number']}"
+            rec = payload["sleep_exploration_recording"]
+            slf_id = f"PA{rec['patient_id']}_V{rec['visite_number']}_FE{rec['recording_number']}"
             if slf_id not in slf_usage:
                 slf_usage[slf_id] = {}
             slf_usage[slf_id]["abosa"] = True
