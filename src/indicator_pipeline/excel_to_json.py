@@ -101,26 +101,29 @@ def df_to_json_payloads(df: pd.DataFrame, abosa_version: str) -> List[Dict[str, 
             continue
 
         payload: Dict[str, Any] = {
-            "patient_id": try_parse_number(patient_id, as_int=True),
-            "visit_number": try_parse_number(visit_number, as_int=True),
-            "recording_type": None,
-            "recording_date": None,
-            "recording_number": try_parse_number(recording_number, as_int=True),
-            "recording_equipment": None,
-            "oximetry_records": {
-                "computing_date_abosa": datetime.date.today().isoformat(),
-                "abosa_version": abosa_version,
-                "tst_abosa": try_parse_number(row.get("TST")),
-                "n_desat_abosa": try_parse_number(row.get("n_desat"), as_int=True),
-                "n_reco_abosa": try_parse_number(row.get("n_reco"), as_int=True),
-                "odi_abosa": try_parse_number(row.get("ODI")),
-                "desaturation_events": extract(row, DESATURATION_MAP),
-                "recovery_events": extract(row, RECOVERY_MAP),
-                "ratios": extract(row, RATIOS_MAP),
-                "severity_indices": extract(row, SEVERITY_MAP),
-                "spo2_stats": extract(row, SPO2_MAP),
-                "time_below_thresholds": extract(row, TIME_BELOW_THRESHOLDS_MAP),
-            },
+            "sleep_exploration_recording": {
+                "evaluation_generale_id": None,
+                "patient_id": try_parse_number(patient_id, as_int=True),
+                "visite_number": try_parse_number(visit_number, as_int=True),
+                "recording_type_id": 1,
+                "recording_date": None,
+                "recording_number": try_parse_number(recording_number, as_int=True),
+                "recording_equipment_id": None,
+                "oximetry_record_attributes": {
+                    "computing_date_abosa": datetime.date.today().isoformat(),
+                    "abosa_version": abosa_version,
+                    "tst_abosa": try_parse_number(row.get("TST")),
+                    "n_desat_abosa": try_parse_number(row.get("n_desat"), as_int=True),
+                    "n_reco_abosa": try_parse_number(row.get("n_reco"), as_int=True),
+                    "odi_abosa": try_parse_number(row.get("ODI")),
+                    "spo2_stat_attributes": extract(row, SPO2_MAP),
+                    "desaturation_event_attributes": extract(row, DESATURATION_MAP),
+                    "recovery_event_attributes": extract(row, RECOVERY_MAP),
+                    "ratio_attributes": extract(row, RATIOS_MAP),
+                    "severity_index_attributes": extract(row, SEVERITY_MAP),
+                    "time_below_threshold_attributes": extract(row, TIME_BELOW_THRESHOLDS_MAP),
+                },
+            }
         }
         payloads.append(payload)
 
