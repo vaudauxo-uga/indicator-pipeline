@@ -9,7 +9,7 @@ ABOSA_OUTPUT = Path(DESKTOP) / "abosa-output"
 
 DEFAULT_YEAR = str(datetime.now().year)
 YEARS = str(config.get("years",DEFAULT_YEAR)).split()
-ABOSA_VERSION = str(config.get("abosa_version", "v1.2.2"))
+ABOSA_VERSION = str(config.get("abosa_version", "1.2.2"))
 
 
 def docker_path(p):
@@ -50,12 +50,12 @@ rule wait_for_manual_step:
     output:
         "abosa_complete.flag"
     message:
-        "==> Étape manuelle requise : préparez les données, puis créez le fichier 'abosa_complete.flag' pour continuer"
+        "==> Manual step required: process data with ABOSA, then create the ‘abosa_complete.flag’ file to continue."
     run:
-        print("⚠️ Étape manuelle requise. Créez le fichier 'abosa_complete.flag' pour continuer.")
+        print("⚠️ Manual step required. Create the file ‘abosa_complete.flag’ to continue.")
         import sys
 
-        sys.exit("Arrêt volontaire : étape manuelle à réaliser.")
+        sys.exit("Voluntary shutdown: manual step to be performed.")
 
 
 rule import_to_mars:
@@ -109,17 +109,17 @@ rule cleanup_slf:
                             shutil.rmtree(f)
                         cleaned.append(str(f))
                     except Exception as e:
-                        print(f"⚠️ Erreur suppression {f}: {e}")
+                        print(f"⚠️ Deletion error {f}: {e}")
             else:
                 skipped.append(sample)
 
         if cleaned:
-            print("✅ Fichiers supprimés :")
+            print("✅ Deleted files :")
             for f in cleaned:
                 print("  -",f)
 
         if skipped:
-            print("⏩ Non supprimés (indicateurs incomplets) :")
+            print("⏩ Files Not Deleted (Incomplete Indicators) :")
             for s in skipped:
                 print("  -",s)
 
@@ -139,4 +139,4 @@ rule clean:
                 print(f"Supprimé : {f}")
             except FileNotFoundError:
                 pass
-        print("✅ Tous les fichiers .done et .flag ont été supprimés.")
+        print("✅ All .done and .flag files have been deleted.")

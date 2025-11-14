@@ -21,8 +21,9 @@
     1. 🔌 [SFTP Server Connection](#-sftp-server-connection)
     2. 🔄 [PSG to .slf Conversion](#-psg-to-slf-conversion)
     3. 🔄 [Excel to JSON Conversion](#-excel-to-json-conversion)
-    4. 🧰 [Utilities](#-utilities)
-    5. 📋 [Logging](#-logging)
+    4. 📨 [Sending payloads to the API](#-sending-payloads-to-the-api)
+    5. 🧰 [Utilities](#-utilities)
+    6. 📋 [Logging](#-logging)
 8. 📚 [Resources and appendices](#-resources-and-appendices)
 
 # 🧭 Overview
@@ -66,7 +67,7 @@
 - **External libraries**:
     - EDF file handling: `pyedflib`, `mne`
     - Data processing: `pandas`, `numpy`, `tqdm`, `openpyxl`
-    - Connections & system: `paramiko`, `python-dotenv`
+    - Connections & system: `paramiko`, `python-dotenv`, `requests`
     - Specific files: `striprtf`, `sleeplab-format`
 - **Target environment**: Dedicated machine or Windows VM (required to run ABOSA; incompatible with Linux or macOS)
 
@@ -85,9 +86,11 @@ indicator-pipeline/
 ├── src/
 │   ├── indicator_pipeline/
 │   │   ├── __init__.py
+│   │   ├── excel_mapping.py
 │   │   ├── excel_to_json.py
 │   │   ├── logging_config.py
 │   │   ├── run_pipeline.py
+│   │   ├── send_json_to_api.py
 │   │   ├── sftp_client.py
 │   │   ├── slf_conversion.py
 │   │   └── utils.py
@@ -113,7 +116,7 @@ indicator-pipeline/
 - `logs/` – Location of generated log files and tracking files (`processed.json`, `slf_usage.json`).
 - `src/`
     - `indicator_pipeline/`
-        - Contains the main pipeline scripts: main module `run_pipeline`, SFTP server connection `sftp_client`, PSG to .*slf* conversion `slf_conversion`, ABOSA Excel data dump to JSON payload `excel_to_json`, logger configuration `logging_config`, and utility functions `utils`.
+        - Contains the main pipeline scripts: main module `run_pipeline`, SFTP server connection `sftp_client`, PSG to .*slf* conversion `slf_conversion`, ABOSA Excel data dump to JSON payload `excel_to_json`, sending payloads to the API `send_json_to_api`, logger configuration `logging_config`, and utility functions `utils`.
     - `sleeplab_converter/`
         - Converts polysomnography files to the *sleeplab* format; code sourced from the [Git repository](https://github.com/HP2-data/sleeplab-converter-mars) `sleeplab-converter-mars`.
         - Submodule `mars_database/` containing conversion and processing modules for annotation files specific to the devices used at the Sleep Lab of CHU Grenoble.
@@ -171,6 +174,8 @@ SFTP_PASSWORD=password
 SFTP_PORT=sftpport
 ABOSA_OUTPUT_PATH=/abosa-output
 LOG_OUTPUT_PATH=/app/logs
+SLF_OUTPUT_PATH=/app/slf-output
+API_TOKEN=token
 ```
 
 - Location:
@@ -209,7 +214,7 @@ snakemake --config years="2024 2025" --cores 1
 ```
 
 - The argument `-config years="2024 2025"` specifies the years to process during pipeline execution. If no years are specified, the **current year is used by default**.
-- The version of **ABOSA** used to calculate indicators can be specified in the _Snakefile_ or directly on the command line using the argument `abosa_version=vx.x.x` (optional argument). By default, the version used is _v1.2.2_.  Please note that if the version is changed, the pipeline may no longer be compatible depending on the modifications made to the software, particularly to the output files.
+- The version of **ABOSA** used to calculate indicators can be specified in the _Snakefile_ or directly on the command line using the argument `abosa_version=x.x.x` (optional argument). By default, the version used is _1.2.2_.  Please note that if the version is changed, the pipeline may no longer be compatible depending on the modifications made to the software, particularly to the output files.
 - This method ensures a **modular, traceable, and reproducible** execution of all steps.
 - The full execution follows four rules:
     1. `run_pipeline` : converts PSG files to *slf* format
@@ -240,7 +245,7 @@ snakemake clean --cores 1
 
 ```bash
 run-pipeline --step slf_conversion --years 2022 2023
-run-pipeline --step import_to_mars --abosa-version vx.x.x
+run-pipeline --step import_to_mars --abosa-version x.x.x
 ```
 
 - **Arguments**:
@@ -248,7 +253,7 @@ run-pipeline --step import_to_mars --abosa-version vx.x.x
         - `slf_conversion` : converts polysomnography files to *slf* format.
         - `import_to_mars` : imports the data produced by ABOSA into the MARS database.
     - `--years` : _Required for the `slf_conversion` step; not required for `import_to_mars`._ Year(s) to process, each year corresponding to a folder with the same name on the SFTP storage server. Multiple years must be separated by spaces (e.g., `--years 2024 2025`).
-    - `--abosa-version` : _Optional._ Character string in the format _vx.x.x_, defaulting to _v1.2.2_. Ensure that the version used is consistent with the one specified in the _Snakefile_.
+    - `--abosa-version` : _Optional._ Character string in the format _x.x.x_, defaulting to _1.2.2_. Ensure that the version used is consistent with the one specified in the _Snakefile_.
 
 ---
 
@@ -430,7 +435,7 @@ During conversion and upload, the SLFConversion class systematically avoids repr
 
 ## 🔄 Excel to JSON Conversion
 
-- `excel_to_json.py`
+`excel_to_json.py`
 
 This module extracts data from Excel files generated by ABOSA, stores them as *JSON* payloads, and then sends them via POST requests to an API that stores them in the MARS database.
 It also keeps track of already processed files to avoid duplicates.
@@ -471,8 +476,24 @@ It also keeps track of already processed files to avoid duplicates.
     - Searches for files to process
     - Skips files that have already been processed
     - Converts Excel files to JSON
-    - Saves the generated files in `logs/json_dumps`
+    - Send the payloads to the API to populate the database via the `send_batch` function (see [_Sending payloads to the API_](#-sending-payloads-to-the-api))
     - Updates `processed.json`
+
+---
+
+## 📨 Sending payloads to the API
+
+`send_json_to_api.py`
+
+This module allows you to send payloads generated by excel_to_json via a POST method to the MARS API.
+
+- `send_recording(payload: Dict[str, Any]): int | None`
+
+    Sends a JSON payload to the MARS API and returns the ID created if successful. If not, raise an error.    
+
+- `send_batch(payloads: List[Dict[str, Any]]): None`
+
+    Sends a batch of payloads to the MARS API.    
 
 ---
 
@@ -497,7 +518,7 @@ It also keeps track of already processed files to avoid duplicates.
 
     - `try_parse_number(value, as_int: bool = False) -> Optional[Union[int, float]]`
         
-        Converts a string to an *int* or *float*, replacing commas with dots to handle European decimal formats. Returns the number or `None` if conversion fails.
+        Converts a string to an *int* or *float*, replacing commas with dots to handle European decimal formats. Rounds floats to two decimal places. Returns the number or `None` if conversion fails.
         
     - `get_repo_root() -> Path`
         

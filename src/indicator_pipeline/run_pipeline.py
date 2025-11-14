@@ -39,7 +39,7 @@ def parse_args():
         required=False,
         type=str,
         default=None,
-        help="Version of the software ABOSA to compute indicators",
+        help="Version of the software ABOSA to compute indicators (e.g. 1.2.2)",
     )
 
     args = parser.parse_args()
@@ -108,10 +108,10 @@ def main():
 
     else:
         if args.abosa_version is None:
-            args.abosa_version = "v1.2.2"
+            args.abosa_version = "1.2.2"
             logger.info("[INFO] No ABOSA version provided, defaulting to v1.2.2")
         else:
-            logger.info(f"[INFO] Using ABOSA version: {args.abosa_version}")
+            logger.info(f"[INFO] Using ABOSA version: v{args.abosa_version}")
         excel_to_json(args.abosa_version)
 
 
