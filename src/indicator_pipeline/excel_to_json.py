@@ -181,15 +181,6 @@ def excel_to_json(abosa_version: str) -> None:
                 slf_usage[slf_id] = {}
             slf_usage[slf_id]["abosa"] = True
 
-        output_dir: Path = get_log_dir() / "json_dumps"
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        safe_filename = rel_path.replace("/", "__").replace("\\", "__") + ".json"
-        output_file = output_dir / safe_filename
-
-        with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(payloads, f, indent=2, ensure_ascii=False)
-
         send_batch(payloads)
 
         new_processed.add(rel_path)
