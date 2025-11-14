@@ -15,6 +15,7 @@ from indicator_pipeline.excel_mapping import (
     SPO2_MAP,
     TIME_BELOW_THRESHOLDS_MAP,
 )
+from indicator_pipeline.send_json_to_api import send_batch
 from indicator_pipeline.utils import (
     get_repo_root,
     parse_patient_visit_recording,
@@ -188,6 +189,8 @@ def excel_to_json(abosa_version: str) -> None:
 
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(payloads, f, indent=2, ensure_ascii=False)
+
+        send_batch(payloads)
 
         new_processed.add(rel_path)
 
