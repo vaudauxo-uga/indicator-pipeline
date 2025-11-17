@@ -75,6 +75,8 @@ def get_excel_from_rel_path(folder_path: Path, rel_path: str) -> pd.DataFrame:
 
     file: Path = xlsx_files[0]
     df: pd.DataFrame = pd.read_excel(file)
+    df = df.astype(object)
+    df = df.where(df.notnull(), None)
     return df
 
 
