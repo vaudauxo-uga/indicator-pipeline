@@ -70,19 +70,8 @@ SPO2_MAP: Dict[str, str] = {
     "variance_spO2": "variance_spo2",
 }
 
-TIME_BELOW_THRESHOLDS_MAP: Dict[str, str] = {
-    "t100": "t_100",
-    "t98": "t_98",
-    "t95": "t_95",
-    "t92": "t_92",
-    "t90": "t_90",
-    "t88": "t_88",
-    "t85": "t_85",
-    "t80": "t_80",
-    "t75": "t_75",
-    "t70": "t_70",
-    "t65": "t_65",
-    "t60": "t_60",
-    "t55": "t_55",
-    "t50": "t_50",
+TIME_BELOW_THRESHOLDS_MAP = {
+    key: None
+    for key in ["t100","t98","t95","t92","t90","t88","t85",
+                "t80","t75","t70","t65","t60","t55","t50"]
 }
