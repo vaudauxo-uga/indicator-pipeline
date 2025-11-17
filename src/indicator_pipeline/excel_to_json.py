@@ -75,6 +75,8 @@ def get_excel_from_rel_path(folder_path: Path, rel_path: str) -> pd.DataFrame:
 
     file: Path = xlsx_files[0]
     df: pd.DataFrame = pd.read_excel(file)
+    df = df.astype(object)
+    df = df.where(df.notnull(), None)
     return df
 
 
@@ -101,6 +103,11 @@ def df_to_json_payloads(df: pd.DataFrame, abosa_version: str) -> List[Dict[str, 
             logger.warning(f"⛔️ Skipped invalid filename: {filename}")
             continue
 
+        tst_value: float = try_parse_number(row.get("TST"))
+        if not tst_value:
+            logger.warning(f"⛔️ Skipped {filename} (TST={tst_value})")
+            continue
+
         payload: Dict[str, Any] = {
             "sleep_exploration_recording": {
                 "evaluation_generale_id": None,
@@ -113,7 +120,7 @@ def df_to_json_payloads(df: pd.DataFrame, abosa_version: str) -> List[Dict[str, 
                 "oximetry_record_attributes": {
                     "computing_date_abosa": datetime.date.today().isoformat(),
                     "abosa_version": abosa_version,
-                    "tst_abosa": try_parse_number(row.get("TST")),
+                    "tst_abosa": tst_value,
                     "n_desat_abosa": try_parse_number(row.get("n_desat"), as_int=True),
                     "n_reco_abosa": try_parse_number(row.get("n_reco"), as_int=True),
                     "odi_abosa": try_parse_number(row.get("ODI")),
