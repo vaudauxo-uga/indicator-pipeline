@@ -84,10 +84,12 @@ def df_to_json_payloads(df: pd.DataFrame, abosa_version: str) -> List[Dict[str, 
     """
 
     def extract(patient_row, mapping: Dict[str, str]) -> Dict[str, Any]:
-        return {
-            new_key: try_parse_number(patient_row.get(old_key))
-            for old_key, new_key in mapping.items()
-        }
+        subpayload: Dict[str, Any] = {}
+        for old_key, new_key in mapping.items():
+            key = new_key if new_key is not None else old_key
+            subpayload[key] = try_parse_number(patient_row.get(old_key))
+
+        return subpayload
 
     payloads: List[Dict[str, Any]] = []
 
