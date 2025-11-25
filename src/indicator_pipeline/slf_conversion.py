@@ -3,7 +3,7 @@ import re
 import tempfile
 import time
 from pathlib import Path, PurePosixPath
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Set
 
 from indicator_pipeline.sftp_client import SFTPClient
 from indicator_pipeline.utils import (
@@ -219,14 +219,20 @@ class SLFConversion:
 
         for patient_id, folders in patients.items():
             remote_raw_dir: PurePosixPath = self.remote_year_dir / patient_id
-            all_psg_converted, missing_recordings, _ = self.check_patient_recordings(
+            _, missing_recordings, _ = self.check_patient_recordings(
                 remote_raw_dir
             )
-            if all_psg_converted:
-                logger.info(f"[SKIP] All SLF already exist for {patient_id}")
-                continue
 
-            logger.info(f"[UPLOAD] Missing SLF for {patient_id} : {missing_recordings}")
+            available_local: Set[str] = {f.name for f in folders}
+            to_upload: List[Tuple[str, str]] = [
+                (visit, rec)
+                for (visit, rec) in missing_recordings
+                if f"{patient_id}_{visit}_{rec}" in available_local
+            ]
+
+            if not to_upload:
+                logger.info(f"[SKIP] No SLF to upload for {patient_id}")
+                continue
 
             try:
                 remote_files: List[str] = self.sftp_client.list_files(
@@ -258,7 +264,7 @@ class SLFConversion:
             if inconsistent:
                 continue
 
-            for visit, rec_number in missing_recordings:
+            for visit, rec_number in to_upload:
                 expected_name = f"{patient_id}_{visit}_{rec_number}"
                 local_visit_folder = local_year_dir / expected_name
                 if not local_visit_folder.exists():
