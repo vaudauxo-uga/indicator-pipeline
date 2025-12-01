@@ -1,8 +1,10 @@
 import argparse
 import logging
 import os
+import re
 import time
 from pathlib import PurePosixPath, Path
+from typing import List
 
 from dotenv import load_dotenv
 
@@ -77,11 +79,19 @@ def main():
             local_slf_output: Path = get_local_slf_output()
 
             try:
-                patients = sftp.list_files(str(server_year_dir))
+                patient_pattern = re.compile(r"^PA\d+$")
+                all_entries: List[str] = sftp.list_files(str(server_year_dir))
+                patients: List[str] = [
+                    name
+                    for name in all_entries
+                    if patient_pattern.match(name)
+                    and sftp.is_dir(str(server_year_dir / name))
+                ]
                 logger.info(f"Found {len(patients)} patient folders: {patients}")
             except FileNotFoundError:
                 logger.warning(
-                    f"[SKIP] Year {year} not found on SFTP ({server_year_dir}). Moving on to the next year.")
+                    f"[SKIP] Year {year} not found on SFTP ({server_year_dir}). Moving on to the next year."
+                )
                 continue
 
             if not patients:
