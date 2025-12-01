@@ -364,7 +364,7 @@ Utility class to establish an SFTP connection and transfer files or folders betw
 
 This module contains the `SLFConversion` class, which centralizes the logic for **converting polysomnography recordings to the *slf* format** (using the `sleeplab-converter` tool) and uploading them to a remote SFTP server.
 
-During conversion and upload, the SLFConversion class systematically avoids reprocessing visits that have already been converted so as not to duplicate existing SLFs. It also ignores non-compliant files (e.g., files whose names do not comply with the format required for PSG T1), thus ensuring that only valid and relevant data is downloaded, converted, and uploaded. This approach optimizes processing time and maintains data consistency on the server.
+During conversion and upload, the SLFConversion class systematically avoids reprocessing visits that have already been converted so as not to duplicate existing SLFs. The files processed on the storage server are only those with names in the form _PAxxxx_. It also ignores non-compliant files (e.g., files whose names do not comply with the format required for PSG T1), thus ensuring that only valid and relevant data is downloaded, converted, and uploaded. This approach optimizes processing time and maintains data consistency on the server.
 
 - **Class `SLFConversion`**
     
