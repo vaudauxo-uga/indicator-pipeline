@@ -80,7 +80,7 @@ def main():
 
             try:
                 patient_pattern = re.compile(r"^PA\d+$")
-                all_entries = sftp.list_files(str(server_year_dir))
+                all_entries: List[str] = sftp.list_files(str(server_year_dir))
                 patients: List[str] = [
                     name
                     for name in all_entries
