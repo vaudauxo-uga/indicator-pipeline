@@ -82,7 +82,10 @@ def main():
                 patient_pattern = re.compile(r"^PA\d+$")
                 all_entries = sftp.list_files(str(server_year_dir))
                 patients: List[str] = [
-                    name for name in all_entries if patient_pattern.match(name)
+                    name
+                    for name in all_entries
+                    if patient_pattern.match(name)
+                    and sftp.is_dir(str(server_year_dir / name))
                 ]
                 logger.info(f"Found {len(patients)} patient folders: {patients}")
             except FileNotFoundError:
