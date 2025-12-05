@@ -198,6 +198,20 @@ class SLFConversion:
         Skips uploads if the patient folder name does not match the .edf filename(s) found on the remote server.
         """
 
+        def is_valid_slf_folder(folder: Path) -> bool:
+            required = [
+                "metadata.json",
+                "manual_hypnogram.a.json",
+                "manual_aasmevents.a.json",
+                "original_annotations.a.json",
+            ]
+
+            for name in required:
+                if not (folder / name).exists():
+                    return False
+
+            return True
+
         local_year_dir: Path = (
             self.local_slf_output / "slf_to_compute" / self.remote_year_dir.name
         )
@@ -269,6 +283,15 @@ class SLFConversion:
                 local_visit_folder = local_year_dir / expected_name
                 if not local_visit_folder.exists():
                     logger.warning(f"[WARNING] Missing local folder {expected_name}")
+                    continue
+
+                if not is_valid_slf_folder(local_visit_folder):
+                    logger.error(
+                        f"[INVALID SLF] Missing JSON files in {local_visit_folder}, deleting folder."
+                    )
+                    import shutil
+
+                    shutil.rmtree(local_visit_folder)
                     continue
 
                 slf_remote_name = f"slf_{local_visit_folder.name}"
