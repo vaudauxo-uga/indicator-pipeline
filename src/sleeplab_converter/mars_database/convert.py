@@ -244,6 +244,19 @@ def convert_dataset(
     Saves slf files in the output directory.
     """
 
+    original_write_subject = writer.write_subject
+
+    def safe_write_subject(subject, subject_path, *args, **kwargs):
+        try:
+            return original_write_subject(subject, subject_path, *args, **kwargs)
+        except Exception as e:
+            subject_id = getattr(subject.metadata, "subject_id", "UNKNOWN")
+            logger.error(f"[SKIP SUBJECT] Unable to write the subject {subject_id}")
+            logger.error(f"Cause : {e}")
+            return None
+
+    writer.write_subject = safe_write_subject
+
     series_dict: Dict = {}
     all_error_counts: Dict = {}
 
@@ -263,6 +276,7 @@ def convert_dataset(
 
     dataset = models.Dataset(name=ds_name, series=series_dict)
     logger.info(f"Start writing the data to {output_dir}...")
+
     writer.write_dataset(
         dataset,
         basedir=str(output_dir),
