@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 
 DESKTOP = os.path.expanduser("~/Desktop")
-SLF_OUTPUT = Path(DESKTOP) / "slf-output"
+SLF_OUTPUT = Path("D:/slf-output")
 LOGS_DIR = Path(DESKTOP) / "indicator-pipeline" / "logs"
 ABOSA_OUTPUT = Path(DESKTOP) / "abosa-output"
 

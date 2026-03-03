@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 logger = logging.getLogger(__name__)
 load_dotenv()
 
-API_URL = "https://staging.mars-database.science/api/internal/v1/recordings"
+API_URL = "https://mars-database.science/api/internal/v1/recordings"
 API_TOKEN = os.getenv("API_TOKEN")
 
 HEADERS: Dict[str, str] = {
