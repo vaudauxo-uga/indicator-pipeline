@@ -2,14 +2,18 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv(".env")
+
 DESKTOP = os.path.expanduser("~/Desktop")
-SLF_OUTPUT = Path("D:/slf-output")
+SLF_OUTPUT = Path(DESKTOP) / "slf-output"
 LOGS_DIR = Path(DESKTOP) / "indicator-pipeline" / "logs"
 ABOSA_OUTPUT = Path(DESKTOP) / "abosa-output"
 
 DEFAULT_YEAR = str(datetime.now().year)
 YEARS = str(config.get("years",DEFAULT_YEAR)).split()
-ABOSA_VERSION = str(config.get("abosa_version", "1.2.2"))
+ABOSA_VERSION = str(config.get("abosa_version","1.2.2"))
 
 
 def docker_path(p):
@@ -33,14 +37,15 @@ rule run_pipeline:
     params:
         years=" ".join(str(y) for y in YEARS),
         slf_output=docker_path(SLF_OUTPUT),
-        logs_dir=docker_path(LOGS_DIR)
+        logs_dir=docker_path(LOGS_DIR),
+        ssh_key=os.getenv("SSH_KEY_PATH")
     shell:
         """
         docker run --rm \
           --env-file .env \
           -v {params.logs_dir}:/app/logs \
           -v {params.slf_output}:/app/slf-output \
-          -v /c/Users/vaudauxo/Documents/.ssh/ssh-mars-openssh:/app/.ssh/ssh-mars-openssh:ro \
+          -v {params.ssh_key}:/app/.ssh/ssh-mars-openssh:ro \
           indicator-pipeline run-pipeline --step slf_conversion --years {params.years}
         """
 
