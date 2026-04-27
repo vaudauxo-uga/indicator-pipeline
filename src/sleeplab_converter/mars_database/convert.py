@@ -12,6 +12,7 @@ from sleeplab_format.models import SampleArray
 
 from indicator_pipeline.utils import extract_subject_id_from_filename
 from sleeplab_converter.edf import read_edf_export, read_edf_export_mne
+from sleeplab_converter.edf_reader import EDFReader
 from sleeplab_converter.events_mapping import STAGE_MAPPING, AASM_EVENT_MAPPING
 from sleeplab_converter.mars_database import annotation
 
@@ -291,14 +292,8 @@ def parse_edf(_edf_path: Path) -> Tuple[datetime, Dict, Dict[str, Any]]:
     Parses EDF signals using pyEDFlib or MNE depending on compatibility.
     Returns the start time, signal data, and header.
     """
-    try:
-        sig_load_funcs, sig_headers, header = read_edf_export(
-            _edf_path, annotations=False
-        )
-    except:
-        sig_load_funcs, sig_headers, header = read_edf_export_mne(
-            str(_edf_path), annotations=False
-        )
+    reader = EDFReader(_edf_path)
+    sig_load_funcs, sig_headers, header = reader.read(annotations=False)
     start_ts, sample_arrays = parse_sample_arrays(sig_load_funcs, sig_headers, header)
 
     return start_ts, sample_arrays, header
