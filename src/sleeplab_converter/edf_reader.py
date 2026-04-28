@@ -86,17 +86,8 @@ class EDFReader:
 
         with pyedflib.EdfReader(edf_path_str, annotations_mode=annotations_mode) as hdl:
             n_chs: int = hdl.signals_in_file
-
-            # Resolve the channel indices if channel names are given
-            if ch_names is None:
-                # Defaults to all channels
-                ch_idx = range(n_chs)
-            else:
-                # Create a mapping from channel name to channel index
-                ch_name_idx_map = {}
-                for i in range(n_chs):
-                    ch_name_idx_map[hdl.getLabel(i).strip()] = i
-                ch_idx = [ch_name_idx_map[ch_name] for ch_name in ch_names]
+            labels = [hdl.getLabel(i).strip() for i in range(n_chs)]
+            ch_idx = self._resolve_channel_indices(labels, ch_names)
 
             header: Dict[str, Any] = hdl.getHeader()
 
@@ -138,17 +129,9 @@ class EDFReader:
             - global EDF header with optional annotations (metadata)
         """
         header = self._read_header_flexible()
-        n_chs = header["ns"]
 
-        if ch_names is None:
-            # Defaults to all channels
-            ch_idx = range(n_chs)
-        else:
-            # Create a mapping from channel name to channel index
-            ch_name_idx_map = {}
-            for i in range(n_chs):
-                ch_name_idx_map[header["label"][i]] = i
-            ch_idx = [ch_name_idx_map[ch_name] for ch_name in ch_names]
+        labels = header["label"]
+        ch_idx = self._resolve_channel_indices(labels, ch_names)
 
         signal_headers = []
         s_load_funcs: List[Callable[[], np.ndarray]] = []
@@ -231,3 +214,15 @@ class EDFReader:
         s_header["transducer"] = header["transducer"][i]
 
         return s_header
+
+    @staticmethod
+    def _resolve_channel_indices(
+        labels: List[str], ch_names: Optional[List[str]]
+    ) -> List[int]:
+        """Resolve requested channel names into channel indices."""
+
+        if ch_names is None:
+            return list(range(len(labels)))
+
+        ch_name_idx_map = {label: i for i, label in enumerate(labels)}
+        return [ch_name_idx_map[ch_name] for ch_name in ch_names]
