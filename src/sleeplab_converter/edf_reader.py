@@ -29,7 +29,7 @@ class EDFReader:
         ch_names: Optional[List[str]] = None,
         annotations: bool = False,
         dtype: np.dtype = np.float32,
-    ):
+    ) -> Tuple[List[Callable[[], np.ndarray]], List[Dict[str, Any]], Dict[str, Any]]:
         try:
             return self._read_with_pyedflib(digital, ch_names, annotations, dtype)
         except Exception as e:
