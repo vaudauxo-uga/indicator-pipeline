@@ -11,7 +11,6 @@ from sleeplab_format import writer, models
 from sleeplab_format.models import SampleArray
 
 from indicator_pipeline.utils import extract_subject_id_from_filename
-from sleeplab_converter.edf import read_edf_export, read_edf_export_mne
 from sleeplab_converter.edf_reader import EDFReader
 from sleeplab_converter.events_mapping import STAGE_MAPPING, AASM_EVENT_MAPPING
 from sleeplab_converter.mars_database import annotation
