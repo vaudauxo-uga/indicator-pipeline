@@ -222,7 +222,7 @@ class EDFReader:
     def _build_mne_signal_header(header: Dict[str, Any], i: int) -> Dict[str, Any]:
         """Build a normalized signal header for one channel from the manually parsed EDF header."""
 
-        s_header = {}
+        s_header: Dict[str, Any] = {}
         fs = header["samples"][i] / header["duration"]
         s_header["sample_frequency"] = fs
         s_header["label"] = header["label"][i]
