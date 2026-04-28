@@ -291,8 +291,8 @@ def parse_edf(_edf_path: Path) -> Tuple[datetime, Dict, Dict[str, Any]]:
     Parses EDF signals using pyEDFlib or MNE depending on compatibility.
     Returns the start time, signal data, and header.
     """
-    reader = EDFReader(_edf_path)
-    sig_load_funcs, sig_headers, header = reader.read(annotations=False)
+    reader = EDFReader(_edf_path, annotations=False)
+    sig_load_funcs, sig_headers, header = reader.read()
     start_ts, sample_arrays = parse_sample_arrays(sig_load_funcs, sig_headers, header)
 
     return start_ts, sample_arrays, header

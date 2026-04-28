@@ -20,26 +20,31 @@ class EDFReader:
         - compatibility fallback for non-compliant EDF files.
     """
 
-    def __init__(self, edf_path: Path):
-        self.edf_path = edf_path
-
-    def read(
+    def __init__(
         self,
+        edf_path: Path,
         digital: bool = False,
         ch_names: Optional[List[str]] = None,
         annotations: bool = False,
         dtype: np.dtype = np.float32,
+    ):
+        self.edf_path = edf_path
+        self.digital = digital
+        self.ch_names = ch_names
+        self.annotations = annotations
+        self.dtype = dtype
+
+    def read(
+        self,
     ) -> Tuple[List[Callable[[], np.ndarray]], List[Dict[str, Any]], Dict[str, Any]]:
         try:
-            return self._read_with_pyedflib(digital, ch_names, annotations, dtype)
+            return self._read_with_pyedflib()
         except Exception as e:
             logger.warning(f"pyedflib failed for {self.edf_path.name}: {e}")
             logger.info(f"Trying MNE fallback for {self.edf_path.name}")
-            return self._read_with_mne(ch_names, annotations, dtype)
+            return self._read_with_mne()
 
-    def _read_signal_pyedflib(
-        self, idx: int, digital: bool = False, dtype: np.dtype = np.float32
-    ) -> np.ndarray:
+    def _read_signal_pyedflib(self, idx: int) -> np.ndarray:
         """
         Reads a specific signal channel from an EDF file using pyedflib.
         Returns the signal values as a NumPy array.
@@ -48,13 +53,11 @@ class EDFReader:
             # Read as digital if need to rewrite EDF
             # since otherwise will crash due to shifted values
             # https://github.com/holgern/pyedflib/issues/46
-            s = hdl.readSignal(idx, digital=digital)
+            s = hdl.readSignal(idx, digital=self.digital)
 
-        return np.array(s).astype(dtype)
+        return np.array(s).astype(self.dtype)
 
-    def _read_signal_mne(
-        self, ch_name: str, dtype: np.dtype = np.float32
-    ) -> np.ndarray:
+    def _read_signal_mne(self, ch_name: str) -> np.ndarray:
         """
         Reads a single channel from an EDF file using the MNE library.
         Returns the signal values as a NumPy array.
@@ -63,14 +66,10 @@ class EDFReader:
             str(self.edf_path), include=ch_name, preload=True, verbose="error"
         )
         s = signal_raw.get_data()
-        return np.array(s[0]).astype(dtype)
+        return np.array(s[0]).astype(self.dtype)
 
     def _read_with_pyedflib(
         self,
-        digital: bool = False,
-        ch_names: Optional[List[str]] = None,
-        annotations: bool = False,
-        dtype: np.dtype = np.float32,
     ) -> Tuple[List[Callable[[], np.ndarray]], List[Dict[str, Any]], Dict[str, Any]]:
         """
         Reads an EDF file using pyedflib.
@@ -82,16 +81,16 @@ class EDFReader:
         edf_path_str: str = str(self.edf_path.resolve())
 
         # Tell EdfReader not to validate annotations if they will not be used
-        annotations_mode: int = 2 if annotations else 0
+        annotations_mode: int = 2 if self.annotations else 0
 
         with pyedflib.EdfReader(edf_path_str, annotations_mode=annotations_mode) as hdl:
             n_chs: int = hdl.signals_in_file
             labels = [hdl.getLabel(i).strip() for i in range(n_chs)]
-            ch_idx = self._resolve_channel_indices(labels, ch_names)
+            ch_idx = self._resolve_channel_indices(labels)
 
             header: Dict[str, Any] = hdl.getHeader()
 
-            if annotations:
+            if self.annotations:
                 raw_annotations = hdl.readAnnotations()
                 parsed_annotations = [[s, d, a] for s, d, a in zip(*raw_annotations)]
                 header["annotations"] = parsed_annotations
@@ -108,8 +107,6 @@ class EDFReader:
                 s_func = partial(
                     self._read_signal_pyedflib,
                     idx=i,
-                    digital=digital,
-                    dtype=dtype,
                 )
                 s_load_funcs.append(s_func)
 
@@ -117,9 +114,6 @@ class EDFReader:
 
     def _read_with_mne(
         self,
-        ch_names: Optional[List[str]] = None,
-        annotations: bool = False,
-        dtype: np.dtype = np.float32,
     ) -> Tuple[List[Callable[[], np.ndarray]], List[Dict[str, Any]], Dict[str, Any]]:
         """
         Read the EDF file using the MNE library.
@@ -131,14 +125,14 @@ class EDFReader:
         header = self._read_header_flexible()
 
         labels = header["label"]
-        ch_idx = self._resolve_channel_indices(labels, ch_names)
+        ch_idx = self._resolve_channel_indices(labels)
 
         signal_headers = []
         s_load_funcs: List[Callable[[], np.ndarray]] = []
         for i in ch_idx:
             label = header["label"][i]
 
-            if label == "EDF Annotations" and not annotations:
+            if label == "EDF Annotations" and not self.annotations:
                 continue
 
             s_header = self._build_mne_signal_header(header, i)
@@ -147,7 +141,6 @@ class EDFReader:
             s_func = partial(
                 self._read_signal_mne,
                 ch_name=header["label"][i],
-                dtype=dtype,
             )
             s_load_funcs.append(s_func)
 
@@ -215,14 +208,11 @@ class EDFReader:
 
         return s_header
 
-    @staticmethod
-    def _resolve_channel_indices(
-        labels: List[str], ch_names: Optional[List[str]]
-    ) -> List[int]:
+    def _resolve_channel_indices(self, labels: List[str]) -> List[int]:
         """Resolve requested channel names into channel indices."""
 
-        if ch_names is None:
+        if self.ch_names is None:
             return list(range(len(labels)))
 
         ch_name_idx_map = {label: i for i, label in enumerate(labels)}
-        return [ch_name_idx_map[ch_name] for ch_name in ch_names]
+        return [ch_name_idx_map[ch_name] for ch_name in self.ch_names]

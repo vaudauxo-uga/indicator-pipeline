@@ -453,7 +453,7 @@ def annotation_csv(path: Path, patient: str, edf_name: str) -> pd.DataFrame:
     # Parse sleep stages from edf+ header
     edf_path: Path = path / patient / f"{edf_name}.edf"
     try:
-        header = EDFReader(edf_path).read(annotations=True)[-1]
+        header = EDFReader(edf_path, annotations=True).read()[-1]
         st_rec: datetime = header["startdate"]
         keys: List[str] = [
             "Validated",
