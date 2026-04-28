@@ -9,6 +9,7 @@ from mne.io import read_raw_edf
 
 logger = logging.getLogger(__name__)
 
+
 class EDFReader:
     """
     Reads EDF files using pyedflib with automatic fallback to MNE when needed.
@@ -51,7 +52,9 @@ class EDFReader:
 
         return np.array(s).astype(dtype)
 
-    def _read_signal_mne(self, ch_name: str, dtype: np.dtype = np.float32) -> np.ndarray:
+    def _read_signal_mne(
+        self, ch_name: str, dtype: np.dtype = np.float32
+    ) -> np.ndarray:
         """
         Reads a single channel from an EDF file using the MNE library.
         Returns the signal values as a NumPy array.
@@ -99,7 +102,7 @@ class EDFReader:
 
             if annotations:
                 raw_annotations = hdl.readAnnotations()
-                parsed_annotations  = [[s, d, a] for s, d, a in zip(*raw_annotations)]
+                parsed_annotations = [[s, d, a] for s, d, a in zip(*raw_annotations)]
                 header["annotations"] = parsed_annotations
 
             signal_headers: List[Dict[str, Any]] = []
@@ -150,39 +153,20 @@ class EDFReader:
         signal_headers = []
         s_load_funcs: List[Callable[[], np.ndarray]] = []
         for i in ch_idx:
-            if header["label"][i] == "EDF Annotations" and annotations:
-                s_header = {}
-                fs = header["samples"][i] / header["duration"]
-                s_header["sample_frequency"] = fs
-                s_header["label"] = header["label"][i]
-                s_header["dimension"] = header["units"][i]
-                s_header["prefilter"] = header["prefilter"][i]
-                s_header["transducer"] = header["transducer"][i]
-                signal_headers.append(s_header)
+            label = header["label"][i]
 
-                s_func = partial(
-                    self._read_signal_mne,
-                    ch_name=header["label"][i],
-                    dtype=dtype,
-                )
-                s_load_funcs.append(s_func)
+            if label == "EDF Annotations" and not annotations:
+                continue
 
-            elif header["label"][i] != "EDF Annotations":
-                s_header = {}
-                fs = header["samples"][i] / header["duration"]
-                s_header["sample_frequency"] = fs
-                s_header["label"] = header["label"][i]
-                s_header["dimension"] = header["units"][i]
-                s_header["prefilter"] = header["prefilter"][i]
-                s_header["transducer"] = header["transducer"][i]
-                signal_headers.append(s_header)
+            s_header = self._build_mne_signal_header(header, i)
+            signal_headers.append(s_header)
 
-                s_func = partial(
-                    self._read_signal_mne,
-                    ch_name=header["label"][i],
-                    dtype=dtype,
-                )
-                s_load_funcs.append(s_func)
+            s_func = partial(
+                self._read_signal_mne,
+                ch_name=header["label"][i],
+                dtype=dtype,
+            )
+            s_load_funcs.append(s_func)
 
         return s_load_funcs, signal_headers, header
 
@@ -233,3 +217,17 @@ class EDFReader:
                 f.read(32).decode("latin-1") for _ in range(header["ns"])
             ]
         return header
+
+    @staticmethod
+    def _build_mne_signal_header(header: Dict[str, Any], i: int) -> Dict[str, Any]:
+        """Build a normalized signal header for one channel from the manually parsed EDF header."""
+
+        s_header = {}
+        fs = header["samples"][i] / header["duration"]
+        s_header["sample_frequency"] = fs
+        s_header["label"] = header["label"][i]
+        s_header["dimension"] = header["units"][i]
+        s_header["prefilter"] = header["prefilter"][i]
+        s_header["transducer"] = header["transducer"][i]
+
+        return s_header
