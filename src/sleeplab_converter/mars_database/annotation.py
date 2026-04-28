@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from striprtf.striprtf import rtf_to_text
 
-from sleeplab_converter.edf import read_edf_export
+from sleeplab_converter.edf_reader import EDFReader
 
 # Here I have fixed many inconsistency in sleep staging, but the timestamps still correspond to real time and cannot be used to map annotations to discontinous signals
 
@@ -453,7 +453,7 @@ def annotation_csv(path: Path, patient: str, edf_name: str) -> pd.DataFrame:
     # Parse sleep stages from edf+ header
     edf_path: Path = path / patient / f"{edf_name}.edf"
     try:
-        header = read_edf_export(edf_path, annotations=True)[-1]
+        header = EDFReader(edf_path, annotations=True).read()[-1]
         st_rec: datetime = header["startdate"]
         keys: List[str] = [
             "Validated",
