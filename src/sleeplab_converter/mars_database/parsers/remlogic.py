@@ -5,7 +5,10 @@ from typing import List, Dict
 import pandas as pd
 
 from sleeplab_converter.mars_database.parsers.base import BaseAnnotationParser
-from sleeplab_converter.mars_database.time_helpers import start_time_to_start_datetime_remlogic
+from sleeplab_converter.mars_database.time_helpers import (
+    start_time_to_start_datetime_remlogic,
+    DATETIME_FORMAT,
+)
 
 
 def annotation_remlogic(txt_path: Path) -> pd.DataFrame:
