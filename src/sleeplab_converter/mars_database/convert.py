@@ -13,7 +13,7 @@ from sleeplab_format.models import SampleArray
 from indicator_pipeline.utils import extract_subject_id_from_filename
 from sleeplab_converter.edf_reader import EDFReader
 from sleeplab_converter.events_mapping import STAGE_MAPPING, AASM_EVENT_MAPPING
-from sleeplab_converter.mars_database import annotation
+from sleeplab_converter.mars_database.annotation_loader import AnnotationLoader
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +109,21 @@ def parse_for_aasm_annotation(
         return None
 
 
+def load_annotation(
+    path: Path, patient: str, edf_name: str
+) -> Tuple[Optional[pd.DataFrame], str]:
+    """
+    Main entry point for loading annotations for a given patient and recording.
+    - Auto-detects annotation type: Deltamed (.rtf/.txt), RemLogic (.txt), or BrainRT (.csv)
+    - Calls the appropriate parser
+    - Returns harmonized annotation data
+
+    Returns the annotation DataFrame and a string describing the recording type.
+    """
+    loader = AnnotationLoader()
+    return loader.load(path, patient, edf_name)
+
+
 def parse_annotations(header: Dict[str, Any], edf_path: Path, edf_name: str) -> Tuple[
     List[models.Annotation[str]],
     List[models.Annotation[models.AASMSleepStage]],
@@ -145,7 +160,7 @@ def parse_annotations(header: Dict[str, Any], edf_path: Path, edf_name: str) -> 
     patient: str = edf_path.name
     path: Path = edf_path.parent.resolve()
 
-    annot_df, recording_type = annotation.load_annotation(path, patient, edf_name)
+    annot_df, recording_type = load_annotation(path, patient, edf_name)
 
     if type(header["startdate"]) is datetime:
         st_rec = header["startdate"]
