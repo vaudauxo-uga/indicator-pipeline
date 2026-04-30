@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List
 
+import numpy as np
 import pandas as pd
 
 from sleeplab_converter.edf_reader import EDFReader
