@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import Optional, List, Tuple, Callable, Dict, Any
@@ -40,8 +41,8 @@ class EDFReader:
         try:
             return self._read_with_pyedflib()
         except Exception as e:
-            logger.warning(f"pyedflib failed for {self.edf_path.name}: {e}")
-            logger.info(f"Trying MNE fallback for {self.edf_path.name}")
+            logger.debug(f"pyedflib failed for {self.edf_path.name}: {e}")
+            logger.debug(f"Trying MNE fallback for {self.edf_path.name}")
             return self._read_with_mne()
 
     def _read_signal_pyedflib(self, idx: int) -> np.ndarray:
@@ -89,6 +90,7 @@ class EDFReader:
             ch_idx = self._resolve_channel_indices(labels)
 
             header: Dict[str, Any] = hdl.getHeader()
+            header["start_datetime"] = header["startdate"]
 
             if self.annotations:
                 raw_annotations = hdl.readAnnotations()
@@ -157,8 +159,8 @@ class EDFReader:
             header["ver"] = int(f.read(8).decode("latin-1"))
             header["patientID"] = f.read(80).decode("latin-1")
             header["recordID"] = f.read(80).decode("latin-1")
-            header["startdate"] = f.read(8).decode("latin-1")
-            header["starttime"] = f.read(8).decode("latin-1")
+            header["startdate_raw"] = f.read(8).decode("latin-1")
+            header["starttime_raw"] = f.read(8).decode("latin-1")
             header["bytes"] = int(f.read(8).decode("latin-1"))
             header["reserved"] = f.read(44).decode("latin-1")
             header["records"] = int(f.read(8).decode("latin-1"))
@@ -192,6 +194,18 @@ class EDFReader:
             header["reserved2"] = [
                 f.read(32).decode("latin-1") for _ in range(header["ns"])
             ]
+
+            try:
+                start_datetime = datetime.strptime(
+                    f"{header['startdate_raw']}-{header['starttime_raw']}",
+                    "%d.%m.%y-%H.%M.%S",
+                )
+            except Exception as e:
+                logger.warning(f"[WARNING] Impossible to compute starttime")
+                start_datetime = None
+
+            header["start_datetime"] = start_datetime
+
         return header
 
     @staticmethod
