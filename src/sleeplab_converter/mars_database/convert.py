@@ -44,12 +44,7 @@ def parse_sample_arrays(
         )
         return models.SampleArray(attributes=array_attributes, values_func=_load_func)
 
-    if type(header["startdate"]) is datetime:
-        start_ts = header["startdate"]
-    else:
-        datetime_str: str = f"{header['startdate']}-{header['starttime']}"
-        datetime_format: str = "%d.%m.%y-%H.%M.%S"
-        start_ts = datetime.strptime(datetime_str, datetime_format)
+    start_ts = header["start_datetime"]
 
     sample_arrays: Dict = {}
     for s_load_func, s_header in zip(s_load_funcs, sig_headers):
@@ -162,12 +157,7 @@ def parse_annotations(header: Dict[str, Any], edf_path: Path, edf_name: str) -> 
 
     annot_df, recording_type = load_annotation(path, patient, edf_name)
 
-    if type(header["startdate"]) is datetime:
-        st_rec = header["startdate"]
-    else:
-        datetime_str: str = f"{header['startdate']}-{header['starttime']}"
-        datetime_format: str = "%d.%m.%y-%H.%M.%S"
-        st_rec = datetime.strptime(datetime_str, datetime_format)
+    st_rec = header["start_datetime"]
 
     if annot_df is not None:
         if st_rec != annot_df.iloc[0]["Start_time"]:
