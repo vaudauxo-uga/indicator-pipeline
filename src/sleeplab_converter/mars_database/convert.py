@@ -14,6 +14,10 @@ from indicator_pipeline.utils import extract_subject_id_from_filename
 from sleeplab_converter.edf_reader import EDFReader
 from sleeplab_converter.events_mapping import STAGE_MAPPING, AASM_EVENT_MAPPING
 from sleeplab_converter.mars_database.annotation_loader import AnnotationLoader
+from sleeplab_converter.mars_database.annotation_mapper import (
+    AnnotationMapper,
+    AnnotationMappingResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -119,119 +123,31 @@ def load_annotation(
     return loader.load(path, patient, edf_name)
 
 
-def parse_annotations(header: Dict[str, Any], edf_path: Path, edf_name: str) -> Tuple[
-    List[models.Annotation[str]],
-    List[models.Annotation[models.AASMSleepStage]],
-    List[models.Annotation[models.AASMEvent]],
-    Optional[datetime],
-    Optional[datetime],
-    Optional[datetime],
-    Optional[datetime],
-    Optional[str],
-]:
+def parse_annotations(
+    header: Dict[str, Any], edf_path: Path, edf_name: str
+) -> tuple[AnnotationMappingResult, str]:
     """
     Parses and categorizes annotations (sleep stages, AASM events, lights on/off, etc.)
     from corresponding annotation files for a given EDF recording.
     Returns:
-        - list of all original events,
-        - list of hypnogram stages,
-        - list of valid AASM events,
-        - analysis start timestamp,
-        - analysis end timestamp,
-        - lights off timestamp,
-        - lights on timestamp,
+        - mapping results in a dedicated dataclass,
         - recording device type.
     """
-
-    events: List[models.Annotation[str]] = []
-    aasm_sleep_stages: List[models.Annotation[models.AASMSleepStage]] = []
-    aasm_events: List[models.Annotation[models.AASMEvent]] = []
-
-    analysis_start = None
-    analysis_end = None
-    lights_on = None
-    lights_off = None
 
     patient: str = edf_path.name
     path: Path = edf_path.parent.resolve()
 
     annot_df, recording_type = load_annotation(path, patient, edf_name)
 
-    st_rec = header["start_datetime"]
+    if annot_df is None:
+        return AnnotationMappingResult.empty(), recording_type
 
-    if annot_df is not None:
-        if st_rec != annot_df.iloc[0]["Start_time"]:
-            for n in range(
-                0, len(annot_df)
-            ):  # Update event lag from start of recording
-                dif = (
-                    annot_df.iloc[n]["Start_time"] - st_rec
-                )  # compare here to the start time of the recording
-                annot_df.loc[n, "Time_from_start"] = dif.seconds
-
-        for index, row in annot_df.iterrows():
-            # push all events with original labels into event list
-            events.append(
-                models.Annotation[str](
-                    name=row["Event_label"],
-                    start_ts=row["Start_time"],
-                    start_sec=row["Time_from_start"],
-                    duration=row["Duration"],
-                )
-            )
-
-            # push only sleep stages into AASM sleep stage list
-            aasm_sleep_stage = parse_sleep_stage(row)
-            if aasm_sleep_stage is not None:
-                aasm_sleep_stages.append(aasm_sleep_stage)
-
-            # push only AASM standard events here
-            aasm_event = parse_for_aasm_annotation(row)
-
-            if aasm_event is not None:
-                aasm_events.append(aasm_event)
-
-            # Find analysis start and end times
-            if row["Event_label"] == "ANALYSIS-START":
-                analysis_start = row["Start_time"]
-
-            if row["Event_label"] == "ANALYSIS-STOP":
-                analysis_end = row["Start_time"]
-
-            # Find lights off
-            if row["Event_label"] == "Lumières éteintes":
-                lights_off = row["Start_time"]
-            elif row["Event_label"] == " LUMIERE ETEINTE":
-                lights_off = row["Start_time"]
-            elif row["Event_label"] == " ETEINT LA LUMIERE":
-                lights_off = row["Start_time"]
-
-            # Find lights on
-            if row["Event_label"] == "Lumières éteintes":
-                lights_on = row["Start_time"]
-            elif row["Event_label"] == " LUMIERE ALLUMEE":
-                lights_on = row["Start_time"]
-            elif row["Event_label"] == " ALLUME LA LUMIERE":
-                lights_on = row["Start_time"]
-            elif row["Event_label"] == " LUMIERE ALLUMEE 6H01":
-                lights_on = row["Start_time"]
-
-        # if annotations for analysis start and end were not found.
-        if analysis_start is None:
-            analysis_start = events[0].start_ts
-        if analysis_end is None:
-            analysis_end = events[-1].start_ts + timedelta(seconds=events[-1].duration)
-
-    return (
-        events,
-        aasm_sleep_stages,
-        aasm_events,
-        analysis_start,
-        analysis_end,
-        lights_off,
-        lights_on,
-        recording_type,
+    mapper = AnnotationMapper(
+        start_datetime=header["start_datetime"],
+        annot_df=annot_df,
     )
+
+    return mapper.map(), recording_type
 
 
 def convert_dataset(
@@ -345,17 +261,10 @@ def read_series(
                 error_counts["edf_reader_not_working"] += 1
                 continue
             try:  # Read annotations that correspond to edf filename (will fail if files are not correctly named or don't follow the normal structure)
-                (
-                    events,
-                    aasm_sleep_stages,
-                    aasm_events,
-                    analysis_start,
-                    analysis_end,
-                    lights_off,
-                    lights_on,
-                    recording_type,
-                ) = parse_annotations(header, edf_path, edf_name=edf_file.stem)
-                if not events:
+                mapping_result, recording_type = parse_annotations(
+                    header, edf_path, edf_name=edf_file.stem
+                )
+                if not mapping_result.events:
                     error_counts["annot_parse_error"] += 1
                     logger.warning(
                         f"[SKIP] Cannot find annotations for subject {edf_path.stem}"
@@ -369,30 +278,27 @@ def read_series(
                 error_counts["annot_parse_error"] += 1
                 continue
 
-            if not events:
-                annotations = {}
-            else:
-                annotations = {
-                    "original_annotations": models.Annotations(
-                        annotations=events, scorer="original"
-                    ),
-                    "manual_hypnogram": models.Hypnogram(
-                        annotations=aasm_sleep_stages, scorer="manual"
-                    ),
-                    "manual_aasmevents": models.AASMEvents(
-                        annotations=aasm_events, scorer="manual"
-                    ),
-                }
+            annotations = {
+                "original_annotations": models.Annotations(
+                    annotations=mapping_result.events, scorer="original"
+                ),
+                "manual_hypnogram": models.Hypnogram(
+                    annotations=mapping_result.sleep_stages, scorer="manual"
+                ),
+                "manual_aasmevents": models.AASMEvents(
+                    annotations=mapping_result.aasm_events, scorer="manual"
+                ),
+            }
 
             subject_id: str = extract_subject_id_from_filename(edf_file)
 
             metadata = models.SubjectMetadata(
                 subject_id=subject_id,
                 recording_start_ts=start_ts,
-                analysis_start=analysis_start,
-                analysis_end=analysis_end,
-                lights_off=lights_off,
-                lights_on=lights_on,
+                analysis_start=mapping_result.analysis_start,
+                analysis_end=mapping_result.analysis_end,
+                lights_off=mapping_result.lights_off,
+                lights_on=mapping_result.lights_on,
                 additional_info={"recording_device": recording_type},
             )
 
