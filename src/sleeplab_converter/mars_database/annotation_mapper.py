@@ -45,16 +45,6 @@ class AnnotationMapper:
         """
         Convert annotation dataframe rows into structured annotation objects.
         """
-        if self.annot_df.empty:
-            return AnnotationMappingResult(
-                events=[],
-                sleep_stages=[],
-                aasm_events=[],
-                analysis_start=None,
-                analysis_end=None,
-                lights_off=None,
-                lights_on=None,
-            )
 
         self.annot_df = self.annot_df.copy()
         self._synchronize_time_from_start()
