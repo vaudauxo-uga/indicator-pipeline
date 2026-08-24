@@ -57,56 +57,6 @@ def parse_sample_arrays(
     return start_ts, sample_arrays
 
 
-def parse_sleep_stage(
-    row: pd.Series,
-) -> Optional[models.Annotation[models.AASMSleepStage]]:
-    """
-    Parse a DataFrame row to create an Annotation object for recognized sleep stages.
-    Returns an Annotation if the 'Event_label' matches a known stage; otherwise, returns None.
-    """
-    # ToDo: Check unique names from all data!! There can be errors
-    if row["Event_label"] in STAGE_MAPPING.keys():
-        return models.Annotation[models.AASMSleepStage](
-            name=STAGE_MAPPING[row["Event_label"]],
-            start_ts=row["Start_time"],
-            start_sec=row["Time_from_start"],
-            duration=row["Duration"],
-        )
-    else:
-        return None
-
-
-def parse_for_aasm_annotation(
-    row: pd.Series,
-) -> Optional[models.Annotation[models.AASMEvent]]:
-    """
-    Parse a DataFrame row to create an Annotation for AASM events.
-    Returns an Annotation if 'Event_label' matches and, if present, 'Validated' is 'Yes'.
-    Otherwise, returns None.
-    """
-    # ToDo: Check unique names from all data!! There can be events missing
-    if row["Event_label"] in AASM_EVENT_MAPPING.keys():
-        if "Validated" in row.keys():
-            if row["Validated"] == "Yes":
-                return models.Annotation[models.AASMEvent](
-                    name=AASM_EVENT_MAPPING[row["Event_label"]],
-                    start_ts=row["Start_time"],
-                    start_sec=row["Time_from_start"],
-                    duration=row["Duration"],
-                )
-            else:
-                return None
-        else:
-            return models.Annotation[models.AASMEvent](
-                name=AASM_EVENT_MAPPING[row["Event_label"]],
-                start_ts=row["Start_time"],
-                start_sec=row["Time_from_start"],
-                duration=row["Duration"],
-            )
-    else:
-        return None
-
-
 def load_annotation(
     path: Path, patient: str, edf_name: str
 ) -> Tuple[Optional[pd.DataFrame], str]:
