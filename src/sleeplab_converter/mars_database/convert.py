@@ -138,7 +138,7 @@ def parse_annotations(
 
     annot_df, recording_type = load_annotation(path, patient, edf_name)
 
-    if annot_df is None:
+    if annot_df is None or annot_df.empty:
         return AnnotationMappingResult.empty(), recording_type
 
     mapper = AnnotationMapper(
