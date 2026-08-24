@@ -18,6 +18,18 @@ class AnnotationMappingResult:
     lights_off: Optional[datetime]
     lights_on: Optional[datetime]
 
+    @classmethod
+    def empty(cls) -> "AnnotationMappingResult":
+        return cls(
+            events=[],
+            sleep_stages=[],
+            aasm_events=[],
+            analysis_start=None,
+            analysis_end=None,
+            lights_off=None,
+            lights_on=None,
+        )
+
 
 class AnnotationMapper:
 
